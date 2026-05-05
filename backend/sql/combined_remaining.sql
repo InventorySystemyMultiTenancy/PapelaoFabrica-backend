@@ -847,10 +847,12 @@ ADD COLUMN IF NOT EXISTS payment_terms TEXT;
 -- Paperboard Factory Modules
 -- ============================================================
 
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 -- 1. Budget Paperboard Config (extends budgets)
 CREATE TABLE IF NOT EXISTS public.budget_paperboard_configs (
   id                   TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
-  budget_id            TEXT NOT NULL REFERENCES public.budgets(id) ON DELETE CASCADE,
+  budget_id            TEXT NOT NULL,
   length               NUMERIC(10,2) NOT NULL CHECK (length > 0),
   width                NUMERIC(10,2) NOT NULL CHECK (width > 0),
   height               NUMERIC(10,2) NOT NULL CHECK (height > 0),
@@ -870,7 +872,7 @@ CREATE TABLE IF NOT EXISTS public.budget_paperboard_configs (
 -- 2. Orders
 CREATE TABLE IF NOT EXISTS public.orders (
   id           TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
-  budget_id    TEXT NOT NULL REFERENCES public.budgets(id),
+  budget_id    TEXT NOT NULL,
   status       TEXT NOT NULL DEFAULT 'production' CHECK (status IN ('production', 'partial', 'completed')),
   created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -879,7 +881,7 @@ CREATE TABLE IF NOT EXISTS public.orders (
 -- 3. Order Items
 CREATE TABLE IF NOT EXISTS public.order_items (
   id                 TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
-  order_id           TEXT NOT NULL REFERENCES public.orders(id) ON DELETE CASCADE,
+  order_id           TEXT NOT NULL,
   budget_item_id     TEXT,
   description        TEXT NOT NULL DEFAULT '',
   quantity_total     NUMERIC(14,2) NOT NULL CHECK (quantity_total > 0),
@@ -892,7 +894,7 @@ CREATE TABLE IF NOT EXISTS public.order_items (
 -- 4. Shipments
 CREATE TABLE IF NOT EXISTS public.shipments (
   id          TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
-  order_id    TEXT NOT NULL REFERENCES public.orders(id) ON DELETE CASCADE,
+  order_id    TEXT NOT NULL,
   notes       TEXT,
   shipped_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -901,15 +903,15 @@ CREATE TABLE IF NOT EXISTS public.shipments (
 -- 5. Shipment Items
 CREATE TABLE IF NOT EXISTS public.shipment_items (
   id              TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
-  shipment_id     TEXT NOT NULL REFERENCES public.shipments(id) ON DELETE CASCADE,
-  order_item_id   TEXT NOT NULL REFERENCES public.order_items(id),
+  shipment_id     TEXT NOT NULL,
+  order_item_id   TEXT NOT NULL,
   quantity        NUMERIC(14,2) NOT NULL CHECK (quantity > 0)
 );
 
 -- 6. Accounts Receivable (Contas a Receber)
 CREATE TABLE IF NOT EXISTS public.accounts_receivable (
   id           TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
-  order_id     TEXT NOT NULL REFERENCES public.orders(id) ON DELETE CASCADE,
+  order_id     TEXT NOT NULL,
   amount       NUMERIC(14,2) NOT NULL CHECK (amount > 0),
   due_date     DATE NOT NULL,
   paid_at      TIMESTAMPTZ,
@@ -925,7 +927,230 @@ ALTER TABLE public.production_orders
   ADD COLUMN IF NOT EXISTS production_type     TEXT CHECK (production_type IN ('corte', 'vinco')),
   ADD COLUMN IF NOT EXISTS production_location TEXT CHECK (production_location IN ('interno', 'terceirizado')),
   ADD COLUMN IF NOT EXISTS loss_percentage     NUMERIC(5,2) DEFAULT 0 CHECK (loss_percentage >= 0 AND loss_percentage <= 100),
-  ADD COLUMN IF NOT EXISTS order_id            TEXT REFERENCES orders(id);
+  ADD COLUMN IF NOT EXISTS order_id            TEXT;
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'orders'
+  )
+  AND EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'budgets'
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM information_schema.table_constraints
+    WHERE constraint_schema = 'public'
+      AND table_name = 'budget_paperboard_configs'
+      AND constraint_name = 'fk_budget_paperboard_configs_budget'
+  ) THEN
+    ALTER TABLE public.budget_paperboard_configs
+      ADD CONSTRAINT fk_budget_paperboard_configs_budget
+      FOREIGN KEY (budget_id)
+      REFERENCES public.budgets(id)
+      ON DELETE CASCADE;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'orders'
+  )
+  AND EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'budgets'
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM information_schema.table_constraints
+    WHERE constraint_schema = 'public'
+      AND table_name = 'orders'
+      AND constraint_name = 'fk_orders_budget'
+  ) THEN
+    ALTER TABLE public.orders
+      ADD CONSTRAINT fk_orders_budget
+      FOREIGN KEY (budget_id)
+      REFERENCES public.budgets(id)
+      ON DELETE RESTRICT;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'order_items'
+  )
+  AND EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'orders'
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM information_schema.table_constraints
+    WHERE constraint_schema = 'public'
+      AND table_name = 'order_items'
+      AND constraint_name = 'fk_order_items_order'
+  ) THEN
+    ALTER TABLE public.order_items
+      ADD CONSTRAINT fk_order_items_order
+      FOREIGN KEY (order_id)
+      REFERENCES public.orders(id)
+      ON DELETE CASCADE;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'shipments'
+  )
+  AND EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'orders'
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM information_schema.table_constraints
+    WHERE constraint_schema = 'public'
+      AND table_name = 'shipments'
+      AND constraint_name = 'fk_shipments_order'
+  ) THEN
+    ALTER TABLE public.shipments
+      ADD CONSTRAINT fk_shipments_order
+      FOREIGN KEY (order_id)
+      REFERENCES public.orders(id)
+      ON DELETE CASCADE;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'shipment_items'
+  )
+  AND EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'shipments'
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM information_schema.table_constraints
+    WHERE constraint_schema = 'public'
+      AND table_name = 'shipment_items'
+      AND constraint_name = 'fk_shipment_items_shipment'
+  ) THEN
+    ALTER TABLE public.shipment_items
+      ADD CONSTRAINT fk_shipment_items_shipment
+      FOREIGN KEY (shipment_id)
+      REFERENCES public.shipments(id)
+      ON DELETE CASCADE;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'shipment_items'
+  )
+  AND EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'order_items'
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM information_schema.table_constraints
+    WHERE constraint_schema = 'public'
+      AND table_name = 'shipment_items'
+      AND constraint_name = 'fk_shipment_items_order_item'
+  ) THEN
+    ALTER TABLE public.shipment_items
+      ADD CONSTRAINT fk_shipment_items_order_item
+      FOREIGN KEY (order_item_id)
+      REFERENCES public.order_items(id)
+      ON DELETE RESTRICT;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'accounts_receivable'
+  )
+  AND EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'orders'
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM information_schema.table_constraints
+    WHERE constraint_schema = 'public'
+      AND table_name = 'accounts_receivable'
+      AND constraint_name = 'fk_accounts_receivable_order'
+  ) THEN
+    ALTER TABLE public.accounts_receivable
+      ADD CONSTRAINT fk_accounts_receivable_order
+      FOREIGN KEY (order_id)
+      REFERENCES public.orders(id)
+      ON DELETE CASCADE;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'production_orders'
+  )
+  AND EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'orders'
+  )
+  AND EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'production_orders'
+      AND column_name = 'order_id'
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM information_schema.table_constraints
+    WHERE constraint_schema = 'public'
+      AND table_name = 'production_orders'
+      AND constraint_name = 'fk_production_orders_order'
+  ) THEN
+    ALTER TABLE public.production_orders
+      ADD CONSTRAINT fk_production_orders_order
+      FOREIGN KEY (order_id)
+      REFERENCES public.orders(id)
+      ON DELETE SET NULL;
+  END IF;
+END $$;
 
 -- 8. Extend products with paperboard material fields
 ALTER TABLE public.products
@@ -945,5 +1170,39 @@ CREATE INDEX IF NOT EXISTS idx_accounts_receivable_order_id ON public.accounts_r
 CREATE INDEX IF NOT EXISTS idx_accounts_receivable_due_date ON public.accounts_receivable(due_date);
 CREATE INDEX IF NOT EXISTS idx_accounts_receivable_status ON public.accounts_receivable(status);
 CREATE INDEX IF NOT EXISTS idx_production_orders_order_id ON public.production_orders(order_id);
+
+
+-- === 20260506_seed_admin_4dpapelao.sql ===
+-- Seed admin user for 4D Papelao
+-- email: admin@4dpapelao.com
+-- password: 1234567
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM public.employees
+    WHERE LOWER(email) = LOWER('admin@4dpapelao.com')
+  ) THEN
+    UPDATE public.employees
+    SET
+      name = 'Administrador 4D',
+      role = 'admin',
+      password_hash = '$2b$10$N0yvqz3KjhLwUnGtKIqjmO1c8UG/TgNQPCl6J4/sEU/bbPrXbUEPC',
+      is_active = TRUE,
+      updated_at = NOW()
+    WHERE LOWER(email) = LOWER('admin@4dpapelao.com');
+  ELSE
+    INSERT INTO public.employees (id, name, email, role, password_hash, is_active)
+    VALUES (
+      'emp-admin-4dpapelao',
+      'Administrador 4D',
+      'admin@4dpapelao.com',
+      'admin',
+      '$2b$10$N0yvqz3KjhLwUnGtKIqjmO1c8UG/TgNQPCl6J4/sEU/bbPrXbUEPC',
+      TRUE
+    );
+  END IF;
+END $$;
 
 
