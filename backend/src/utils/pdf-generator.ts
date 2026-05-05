@@ -1,5 +1,5 @@
 import PDFDocument from "pdfkit";
-import { Budget } from "../../models/budget.model";
+import { Budget, BudgetMaterial } from "../models/budget.model";
 
 const BRAND_COLOR = "#f97316"; // orange-500
 const DARK = "#1e1e1e";
@@ -165,7 +165,7 @@ export function generateBudgetPDF(
   iy += 20;
 
   // Table rows
-  budget.materials.forEach((mat, idx) => {
+  budget.materials.forEach((mat: BudgetMaterial, idx: number) => {
     const rowH = 22;
     if (idx % 2 === 0) {
       doc.rect(50, iy, doc.page.width - 100, rowH).fill(LIGHT_GRAY);
