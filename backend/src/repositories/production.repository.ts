@@ -204,7 +204,9 @@ function normalizeProductionStatus(status: string): ProductionStatus {
     return "Pendente";
   }
 
-  return STATUS_ALIASES[normalizeStageName(normalizedStatus)] ?? normalizedStatus;
+  return (
+    STATUS_ALIASES[normalizeStageName(normalizedStatus)] ?? normalizedStatus
+  );
 }
 
 function mapProductionRow(row: ProductionOrderRow): Production {
@@ -221,13 +223,16 @@ function mapProductionRow(row: ProductionOrderRow): Production {
     initialCost: toNumber(row.initial_cost),
     materials: [],
     productionType: (row.production_type as "corte" | "vinco" | null) ?? null,
-    productionLocation: (row.production_location as "interno" | "terceirizado" | null) ?? null,
+    productionLocation:
+      (row.production_location as "interno" | "terceirizado" | null) ?? null,
     lossPercentage: toNumber(row.loss_percentage ?? 0),
     orderId: row.order_id ?? null,
   };
 }
 
-function mapMaterialRow(row: ProductionWithMaterialRow): ProductionMaterial | null {
+function mapMaterialRow(
+  row: ProductionWithMaterialRow,
+): ProductionMaterial | null {
   if (row.product_name === null || row.quantity === null || row.unit === null) {
     return null;
   }
@@ -246,7 +251,9 @@ function mapMaterialRow(row: ProductionWithMaterialRow): ProductionMaterial | nu
   return material;
 }
 
-function normalizeMaterial(input: CreateProductionInput["materials"][number]): ProductionMaterial {
+function normalizeMaterial(
+  input: CreateProductionInput["materials"][number],
+): ProductionMaterial {
   const material: ProductionMaterial = {
     productName: input.productName,
     quantity: input.quantity,
@@ -281,7 +288,9 @@ function groupRows(rows: ProductionWithMaterialRow[]): Production[] {
   return [...productionsById.values()];
 }
 
-function mapStatusAssignmentRow(row: ProductionStatusAssignmentRow): ProductionStatusAssignment {
+function mapStatusAssignmentRow(
+  row: ProductionStatusAssignmentRow,
+): ProductionStatusAssignment {
   return {
     id: row.id,
     stageId: row.stage_id,
@@ -297,10 +306,14 @@ function updateLegacyStatusFromAssignments(production: Production): void {
     return;
   }
 
-  production.productionStatus = production.statuses.map((status) => status.stageName).join(", ");
+  production.productionStatus = production.statuses
+    .map((status) => status.stageName)
+    .join(", ");
 }
 
-async function hasProductionStatusStagesTable(client: PoolClient): Promise<boolean> {
+async function hasProductionStatusStagesTable(
+  client: PoolClient,
+): Promise<boolean> {
   if (productionStatusStagesTableExists !== null) {
     return productionStatusStagesTableExists;
   }
@@ -320,7 +333,9 @@ async function hasProductionStatusStagesTable(client: PoolClient): Promise<boole
   return productionStatusStagesTableExists;
 }
 
-async function hasProductionOrderStatusesTable(client: PoolClient): Promise<boolean> {
+async function hasProductionOrderStatusesTable(
+  client: PoolClient,
+): Promise<boolean> {
   if (productionOrderStatusesTableExists !== null) {
     return productionOrderStatusesTableExists;
   }
@@ -340,7 +355,9 @@ async function hasProductionOrderStatusesTable(client: PoolClient): Promise<bool
   return productionOrderStatusesTableExists;
 }
 
-async function hasProductionStatusesSchema(client: PoolClient): Promise<boolean> {
+async function hasProductionStatusesSchema(
+  client: PoolClient,
+): Promise<boolean> {
   const hasStages = await hasProductionStatusStagesTable(client);
   const hasAssignments = await hasProductionOrderStatusesTable(client);
   return hasStages && hasAssignments;
@@ -393,9 +410,15 @@ async function listStatusesByProductionIds(
   return statusesByProduction;
 }
 
-async function enrichProductionsWithStatuses(client: PoolClient, productions: Production[]): Promise<void> {
+async function enrichProductionsWithStatuses(
+  client: PoolClient,
+  productions: Production[],
+): Promise<void> {
   const productionIds = productions.map((production) => production.id);
-  const statusesByProduction = await listStatusesByProductionIds(client, productionIds);
+  const statusesByProduction = await listStatusesByProductionIds(
+    client,
+    productionIds,
+  );
 
   for (const production of productions) {
     production.statuses = statusesByProduction.get(production.id) ?? [];
@@ -445,7 +468,9 @@ async function hasUnitPriceColumn(client: PoolClient): Promise<boolean> {
   return unitPriceColumnExists;
 }
 
-async function hasInstallationTeamIdColumn(client: PoolClient): Promise<boolean> {
+async function hasInstallationTeamIdColumn(
+  client: PoolClient,
+): Promise<boolean> {
   if (installationTeamIdColumnExists !== null) {
     return installationTeamIdColumnExists;
   }
@@ -487,7 +512,9 @@ async function hasBudgetIdColumn(client: PoolClient): Promise<boolean> {
   return budgetIdColumnExists;
 }
 
-async function hasPaperboardProductionColumns(client: PoolClient): Promise<boolean> {
+async function hasPaperboardProductionColumns(
+  client: PoolClient,
+): Promise<boolean> {
   if (paperboardProductionColumnsExist !== null) {
     return paperboardProductionColumnsExist;
   }
@@ -548,7 +575,9 @@ async function hasProductsTable(client: PoolClient): Promise<boolean> {
   return productsTableExists;
 }
 
-async function hasProductStockQuantityColumn(client: PoolClient): Promise<boolean> {
+async function hasProductStockQuantityColumn(
+  client: PoolClient,
+): Promise<boolean> {
   if (productStockQuantityColumnExists !== null) {
     return productStockQuantityColumnExists;
   }
@@ -569,7 +598,9 @@ async function hasProductStockQuantityColumn(client: PoolClient): Promise<boolea
   return productStockQuantityColumnExists;
 }
 
-async function hasProductStockMovementsTable(client: PoolClient): Promise<boolean> {
+async function hasProductStockMovementsTable(
+  client: PoolClient,
+): Promise<boolean> {
   if (productStockMovementsTableExists !== null) {
     return productStockMovementsTableExists;
   }
@@ -660,10 +691,14 @@ async function resolveProductIdForMaterial(
   );
 
   if (productByNameResult.rows.length === 0) {
-    throw new AppError("Material product was not found in products table", 400, {
-      productionOrderId,
-      productName: material.product_name,
-    });
+    throw new AppError(
+      "Material product was not found in products table",
+      400,
+      {
+        productionOrderId,
+        productName: material.product_name,
+      },
+    );
   }
 
   if (productByNameResult.rows.length > 1) {
@@ -713,11 +748,17 @@ async function updateProductionStatus(
   }
 }
 
-async function updateProductionAsApproved(client: PoolClient, productionOrderId: string): Promise<ProductionStatus> {
+async function updateProductionAsApproved(
+  client: PoolClient,
+  productionOrderId: string,
+): Promise<ProductionStatus> {
   return updateProductionStatus(client, productionOrderId, "approved");
 }
 
-async function deductMaterialsFromStock(client: PoolClient, productionOrderId: string): Promise<void> {
+async function deductMaterialsFromStock(
+  client: PoolClient,
+  productionOrderId: string,
+): Promise<void> {
   const canUseProductId = await hasProductIdColumn(client);
 
   await ensureStockControlSchema(client);
@@ -752,7 +793,11 @@ async function deductMaterialsFromStock(client: PoolClient, productionOrderId: s
 
   for (const material of materialsResult.rows) {
     const quantityToDeduct = toNumber(material.quantity);
-    const resolvedProductId = await resolveProductIdForMaterial(client, productionOrderId, material);
+    const resolvedProductId = await resolveProductIdForMaterial(
+      client,
+      productionOrderId,
+      material,
+    );
 
     if (quantityToDeduct <= 0) {
       continue;
@@ -772,7 +817,9 @@ async function deductMaterialsFromStock(client: PoolClient, productionOrderId: s
     );
 
     if (stockUpdateResult.rows.length === 0) {
-      const productResult = await client.query<{ stock_quantity: string | number }>(
+      const productResult = await client.query<{
+        stock_quantity: string | number;
+      }>(
         `
           SELECT stock_quantity
           FROM public.products
@@ -782,11 +829,15 @@ async function deductMaterialsFromStock(client: PoolClient, productionOrderId: s
       );
 
       if (productResult.rows.length === 0) {
-        throw new AppError("Material product was not found in products table", 400, {
-          productionOrderId,
-          productId: resolvedProductId,
-          productName: material.product_name,
-        });
+        throw new AppError(
+          "Material product was not found in products table",
+          400,
+          {
+            productionOrderId,
+            productId: resolvedProductId,
+            productName: material.product_name,
+          },
+        );
       }
 
       throw new AppError("Insufficient stock to complete production", 409, {
@@ -822,7 +873,10 @@ async function deductMaterialsFromStock(client: PoolClient, productionOrderId: s
   }
 }
 
-async function ensureProductionExistsForUpdate(client: PoolClient, productionId: string): Promise<boolean> {
+async function ensureProductionExistsForUpdate(
+  client: PoolClient,
+  productionId: string,
+): Promise<boolean> {
   const result = await client.query<{ id: string }>(
     `
       SELECT id::text AS id
@@ -836,7 +890,10 @@ async function ensureProductionExistsForUpdate(client: PoolClient, productionId:
   return result.rows.length > 0;
 }
 
-async function ensureTeamExists(client: PoolClient, teamId: string): Promise<void> {
+async function ensureTeamExists(
+  client: PoolClient,
+  teamId: string,
+): Promise<void> {
   const result = await client.query<{ id: string }>(
     `
       SELECT id
@@ -871,7 +928,9 @@ async function resolveStatusStage(
     );
 
     if (existing.rows.length === 0) {
-      throw new AppError("Status stage not found", 400, { stageId: input.stageId });
+      throw new AppError("Status stage not found", 400, {
+        stageId: input.stageId,
+      });
     }
 
     return existing.rows[0];
@@ -904,7 +963,10 @@ async function resolveStatusStage(
   return inserted.rows[0];
 }
 
-async function syncLegacyProductionStatus(client: PoolClient, productionId: string): Promise<void> {
+async function syncLegacyProductionStatus(
+  client: PoolClient,
+  productionId: string,
+): Promise<void> {
   const result = await client.query<{ joined_statuses: string | null }>(
     `
       SELECT
@@ -937,7 +999,9 @@ async function createStatusAssignment(
   input: AdvanceProductionStatusInput,
   resolvedStage?: ProductionStatusStageRow,
 ): Promise<void> {
-  await ensureTeamExists(client, input.teamId);
+  if (input.teamId) {
+    await ensureTeamExists(client, input.teamId);
+  }
   const stage = resolvedStage ?? (await resolveStatusStage(client, input));
 
   await client.query(
@@ -1044,12 +1108,18 @@ async function listById(id: string): Promise<Production | undefined> {
     const canUseInstallationTeamId = await hasInstallationTeamIdColumn(client);
     const canUseBudgetId = await hasBudgetIdColumn(client);
     const canUsePaperboard = await hasPaperboardProductionColumns(client);
-    const productIdSelect = canUseProductId ? "pom.product_id" : "NULL::text AS product_id";
-    const unitPriceSelect = canUseUnitPrice ? "pom.unit_price" : "0::numeric AS unit_price";
+    const productIdSelect = canUseProductId
+      ? "pom.product_id"
+      : "NULL::text AS product_id";
+    const unitPriceSelect = canUseUnitPrice
+      ? "pom.unit_price"
+      : "0::numeric AS unit_price";
     const installationTeamIdSelect = canUseInstallationTeamId
       ? "po.installation_team_id"
       : "NULL::text AS installation_team_id";
-    const budgetIdSelect = canUseBudgetId ? "po.budget_id" : "NULL::text AS budget_id";
+    const budgetIdSelect = canUseBudgetId
+      ? "po.budget_id"
+      : "NULL::text AS budget_id";
     const paperboardSelect = canUsePaperboard
       ? "po.production_type, po.production_location, po.loss_percentage, po.order_id"
       : "NULL::text AS production_type, NULL::text AS production_location, 0::numeric AS loss_percentage, NULL::text AS order_id";
@@ -1093,7 +1163,9 @@ async function listById(id: string): Promise<Production | undefined> {
   }
 }
 
-async function findAll(filters: { employeeId?: string; activeOnly?: boolean } = {}): Promise<Production[]> {
+async function findAll(
+  filters: { employeeId?: string; activeOnly?: boolean } = {},
+): Promise<Production[]> {
   const { employeeId, activeOnly = false } = filters;
   const client = await pool.connect();
 
@@ -1104,12 +1176,18 @@ async function findAll(filters: { employeeId?: string; activeOnly?: boolean } = 
     const canUseTeamMembersTable = await hasTeamMembersTable(client);
     const canUseBudgetId = await hasBudgetIdColumn(client);
     const canUsePaperboard = await hasPaperboardProductionColumns(client);
-    const productIdSelect = canUseProductId ? "pom.product_id" : "NULL::text AS product_id";
-    const unitPriceSelect = canUseUnitPrice ? "pom.unit_price" : "0::numeric AS unit_price";
+    const productIdSelect = canUseProductId
+      ? "pom.product_id"
+      : "NULL::text AS product_id";
+    const unitPriceSelect = canUseUnitPrice
+      ? "pom.unit_price"
+      : "0::numeric AS unit_price";
     const installationTeamIdSelect = canUseInstallationTeamId
       ? "po.installation_team_id"
       : "NULL::text AS installation_team_id";
-    const budgetIdSelect = canUseBudgetId ? "po.budget_id" : "NULL::text AS budget_id";
+    const budgetIdSelect = canUseBudgetId
+      ? "po.budget_id"
+      : "NULL::text AS budget_id";
     const paperboardSelect = canUsePaperboard
       ? "po.production_type, po.production_location, po.loss_percentage, po.order_id"
       : "NULL::text AS production_type, NULL::text AS production_location, 0::numeric AS loss_percentage, NULL::text AS order_id";
@@ -1123,7 +1201,9 @@ async function findAll(filters: { employeeId?: string; activeOnly?: boolean } = 
     const whereClauses: string[] = [];
 
     if (filterByEmployee) {
-      joins.push("INNER JOIN public.team_members tm ON tm.team_id = po.installation_team_id");
+      joins.push(
+        "INNER JOIN public.team_members tm ON tm.team_id = po.installation_team_id",
+      );
       whereClauses.push("tm.employee_id = $1");
     }
 
@@ -1185,7 +1265,8 @@ async function findAll(filters: { employeeId?: string; activeOnly?: boolean } = 
     }
 
     const joinsSql = joins.length > 0 ? joins.join(" ") : "";
-    const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
+    const whereSql =
+      whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
 
     const result = await client.query<ProductionWithMaterialRow>(
       `
@@ -1223,7 +1304,9 @@ async function findAll(filters: { employeeId?: string; activeOnly?: boolean } = 
   }
 }
 
-async function create(payload: CreateProductionRepositoryInput): Promise<Production> {
+async function create(
+  payload: CreateProductionRepositoryInput,
+): Promise<Production> {
   const client = await pool.connect();
 
   try {
@@ -1307,7 +1390,13 @@ async function create(payload: CreateProductionRepositoryInput): Promise<Product
     const production = mapProductionRow(productionInsert.rows[0]);
 
     // Update paperboard-specific fields if columns exist and payload provides them
-    if (canUsePaperboard && (payload.productionType || payload.productionLocation || payload.lossPercentage || payload.orderId)) {
+    if (
+      canUsePaperboard &&
+      (payload.productionType ||
+        payload.productionLocation ||
+        payload.lossPercentage ||
+        payload.orderId)
+    ) {
       await client.query(
         `UPDATE public.production_orders
          SET production_type = $1, production_location = $2, loss_percentage = $3, order_id = $4
@@ -1408,7 +1497,12 @@ async function create(payload: CreateProductionRepositoryInput): Promise<Product
             )
             VALUES ($1, $2, $3, $4);
           `,
-          [production.id, material.productName, material.quantity, material.unit],
+          [
+            production.id,
+            material.productName,
+            material.quantity,
+            material.unit,
+          ],
         );
       }
     }
@@ -1476,7 +1570,9 @@ async function complete(id: string): Promise<Production | undefined> {
     }
 
     const currentProduction = currentResult.rows[0];
-    const normalizedCurrentStatus = normalizeProductionStatus(currentProduction.production_status);
+    const normalizedCurrentStatus = normalizeProductionStatus(
+      currentProduction.production_status,
+    );
 
     const normalizedLowerStatus = normalizedCurrentStatus.toLowerCase();
     const isAlreadyApproved =
@@ -1501,7 +1597,9 @@ async function complete(id: string): Promise<Production | undefined> {
 
     return {
       ...mapProductionRow(currentProduction),
-      productionStatus: isAlreadyApproved ? normalizedCurrentStatus : persistedApprovalStatus,
+      productionStatus: isAlreadyApproved
+        ? normalizedCurrentStatus
+        : persistedApprovalStatus,
     };
   } catch (error) {
     await client.query("ROLLBACK");
@@ -1521,7 +1619,10 @@ function hasApprovalKeyword(statusName: string): boolean {
   );
 }
 
-async function advanceStatus(id: string, input: AdvanceProductionStatusInput): Promise<Production | undefined> {
+async function advanceStatus(
+  id: string,
+  input: AdvanceProductionStatusInput,
+): Promise<Production | undefined> {
   const client = await pool.connect();
 
   try {
@@ -1609,7 +1710,10 @@ async function advanceStatus(id: string, input: AdvanceProductionStatusInput): P
   }
 }
 
-async function setStatuses(id: string, input: SetProductionStatusesInput): Promise<Production | undefined> {
+async function setStatuses(
+  id: string,
+  input: SetProductionStatusesInput,
+): Promise<Production | undefined> {
   const client = await pool.connect();
 
   try {
