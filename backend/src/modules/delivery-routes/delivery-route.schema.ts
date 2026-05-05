@@ -12,8 +12,8 @@ export type RouteStatus = z.infer<typeof routeStatusSchema>;
 export type RouteItemStatus = z.infer<typeof routeItemStatusSchema>;
 
 export const createRouteItemSchema = z.object({
-  shipmentId: z.string().uuid().optional().nullable(),
-  clientId: z.string().uuid().optional().nullable(),
+  shipmentId: z.string().trim().min(1).optional().nullable(),
+  clientId: z.string().trim().min(1).optional().nullable(),
   clientName: z.string().trim().min(1, "clientName é obrigatório").max(255),
   address: z.string().trim().min(1, "endereço é obrigatório"),
   quantity: z.number().int().min(0).default(0),
