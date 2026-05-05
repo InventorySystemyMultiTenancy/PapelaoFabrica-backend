@@ -4,6 +4,7 @@ export const consignedMovementTypeSchema = z.enum(["entrada", "saida"]);
 
 export const upsertConsignedStockSchema = z.object({
   clientId: z.string().trim().min(1, "clientId é obrigatório"),
+  orderId: z.string().trim().min(1).optional().nullable(),
   productId: z.string().trim().min(1).optional().nullable(),
   productName: z.string().trim().min(1, "productName é obrigatório").max(255),
   notes: z.string().trim().max(2000).optional().nullable(),
@@ -25,6 +26,7 @@ export interface ConsignedStockItem {
   id: string;
   clientId: string;
   clientName?: string;
+  orderId: string | null;
   productId: string | null;
   productName: string;
   quantity: number;
