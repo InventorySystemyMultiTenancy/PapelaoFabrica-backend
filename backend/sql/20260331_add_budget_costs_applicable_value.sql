@@ -10,6 +10,17 @@ UPDATE public.budgets
 SET costs_applicable_value = GREATEST(COALESCE(total_cost, 0), 0)
 WHERE costs_applicable_value IS NULL OR costs_applicable_value = 0;
 
-UPDATE public.budgets
-SET costs_applied_value = GREATEST(COALESCE(costs_applicable_value, 0), 0)
-WHERE status IN ('pre_approved', 'approved');
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'budgets'
+      AND column_name = 'costs_applied_value'
+  ) THEN
+    UPDATE public.budgets
+    SET costs_applied_value = GREATEST(COALESCE(costs_applicable_value, 0), 0)
+    WHERE status IN ('pre_approved', 'approved');
+  END IF;
+END $$;
