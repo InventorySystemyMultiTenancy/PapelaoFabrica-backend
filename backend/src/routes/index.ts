@@ -23,6 +23,7 @@ import { purchaseOrderRoutes } from "../modules/purchase-orders/purchase-order.r
 import { consignedStockRoutes } from "../modules/consigned-stock/consigned-stock.routes";
 import { pricingRoutes } from "../modules/pricing/pricing.routes";
 import { dashboardRoutes } from "../modules/dashboard/dashboard.routes";
+import { fichaTecnicaRoutes } from "./ficha-tecnica.routes";
 
 const apiRoutes = Router();
 
@@ -50,5 +51,6 @@ apiRoutes.use("/purchase-orders", purchaseOrderRoutes);
 apiRoutes.use("/consigned-stock", consignedStockRoutes);
 apiRoutes.use("/pricing", pricingRoutes);
 apiRoutes.use("/dashboard", dashboardRoutes);
+apiRoutes.use("/ficha-tecnica", fichaTecnicaRoutes);
 
 export { apiRoutes };

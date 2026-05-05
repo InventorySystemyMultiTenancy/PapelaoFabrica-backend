@@ -10,7 +10,10 @@ import { productionRepository } from "../repositories/production.repository";
 import { teamRepository } from "../repositories/team.repository";
 import { AppError } from "../utils/app-error";
 
-async function listProductions(employeeId?: string, activeOnly = false): Promise<Production[]> {
+async function listProductions(
+  employeeId?: string,
+  activeOnly = false,
+): Promise<Production[]> {
   if (employeeId) {
     const employee = await employeeRepository.findById(employeeId);
 
@@ -25,16 +28,21 @@ async function listProductions(employeeId?: string, activeOnly = false): Promise
   });
 }
 
-async function createProduction(payload: CreateProductionInput): Promise<Production> {
-  const team = await teamRepository.findById(payload.installationTeamId);
+async function createProduction(
+  payload: CreateProductionInput,
+): Promise<Production> {
+  let installationTeamName: string | null = null;
 
-  if (!team) {
-    throw new AppError("Team not found", 400);
+  if (payload.installationTeamId) {
+    const team = await teamRepository.findById(payload.installationTeamId);
+    if (team) {
+      installationTeamName = team.name;
+    }
   }
 
   return productionRepository.create({
     ...payload,
-    installationTeam: team.name,
+    installationTeam: installationTeamName,
   });
 }
 
@@ -52,7 +60,10 @@ async function completeProduction(id: string): Promise<Production> {
   return production;
 }
 
-async function setProductionStatuses(id: string, payload: SetProductionStatusesInput): Promise<Production> {
+async function setProductionStatuses(
+  id: string,
+  payload: SetProductionStatusesInput,
+): Promise<Production> {
   const production = await productionRepository.setStatuses(id, payload);
 
   if (!production) {
@@ -62,7 +73,10 @@ async function setProductionStatuses(id: string, payload: SetProductionStatusesI
   return production;
 }
 
-async function advanceProductionStatus(id: string, payload: AdvanceProductionStatusInput): Promise<Production> {
+async function advanceProductionStatus(
+  id: string,
+  payload: AdvanceProductionStatusInput,
+): Promise<Production> {
   const production = await productionRepository.advanceStatus(id, payload);
 
   if (!production) {
