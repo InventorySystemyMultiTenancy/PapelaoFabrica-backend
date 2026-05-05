@@ -4,7 +4,7 @@ export const clicheStatusSchema = z.enum(["active", "inactive"]);
 export type ClicheStatus = z.infer<typeof clicheStatusSchema>;
 
 export const createClicheSchema = z.object({
-  clientId: z.string().uuid("clientId deve ser um UUID válido"),
+  clientId: z.string().trim().min(1, "clientId é obrigatório"),
   name: z.string().trim().min(1, "nome é obrigatório").max(255),
   colors: z.number().int().min(1).max(10).default(1),
   widthCm: z.number().positive().optional().nullable(),
