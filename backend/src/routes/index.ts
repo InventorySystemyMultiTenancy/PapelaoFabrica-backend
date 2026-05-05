@@ -15,6 +15,14 @@ import { paperboardRoutes } from "../modules/paperboard/paperboard.routes";
 import { orderRoutes } from "../modules/orders/order.routes";
 import { shipmentRoutes } from "../modules/shipments/shipment.routes";
 import { financialRoutes } from "../modules/financial/financial.routes";
+import { clicheRoutes } from "../modules/cliches/cliche.routes";
+import { payableRoutes } from "../modules/accounts-payable/payable.routes";
+import { deliveryRouteRoutes } from "../modules/delivery-routes/delivery-route.routes";
+import { wasteRoutes } from "../modules/waste/waste.routes";
+import { purchaseOrderRoutes } from "../modules/purchase-orders/purchase-order.routes";
+import { consignedStockRoutes } from "../modules/consigned-stock/consigned-stock.routes";
+import { pricingRoutes } from "../modules/pricing/pricing.routes";
+import { dashboardRoutes } from "../modules/dashboard/dashboard.routes";
 
 const apiRoutes = Router();
 
@@ -34,5 +42,13 @@ apiRoutes.use("/", paperboardRoutes);
 apiRoutes.use("/orders", orderRoutes);
 apiRoutes.use("/", shipmentRoutes);
 apiRoutes.use("/financial", financialRoutes);
+apiRoutes.use("/cliches", clicheRoutes);
+apiRoutes.use("/accounts-payable", payableRoutes);
+apiRoutes.use("/delivery-routes", deliveryRouteRoutes);
+apiRoutes.use("/waste", wasteRoutes);
+apiRoutes.use("/purchase-orders", purchaseOrderRoutes);
+apiRoutes.use("/consigned-stock", consignedStockRoutes);
+apiRoutes.use("/pricing", pricingRoutes);
+apiRoutes.use("/dashboard", dashboardRoutes);
 
 export { apiRoutes };

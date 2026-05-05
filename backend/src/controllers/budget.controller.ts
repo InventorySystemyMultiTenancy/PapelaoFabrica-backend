@@ -1,7 +1,11 @@
 import { Request, Response } from "express";
 import { asyncHandler } from "../utils/async-handler";
-import { listBudgetsQuerySchema, listExpenseDepartmentsQuerySchema } from "../models/budget.model";
+import {
+  listBudgetsQuerySchema,
+  listExpenseDepartmentsQuerySchema,
+} from "../models/budget.model";
 import { budgetService } from "../services/budget.service";
+import { generateBudgetPDF } from "../utils/pdf-generator";
 
 function toOptionalQueryString(value: unknown): string | undefined {
   if (typeof value !== "string") {
@@ -27,14 +31,16 @@ const list = asyncHandler(async (req: Request, res: Response) => {
   res.status(200).json(budgets);
 });
 
-const listExpenseDepartments = asyncHandler(async (req: Request, res: Response) => {
-  const query = listExpenseDepartmentsQuerySchema.parse({
-    search: toOptionalQueryString(req.query.search),
-  });
+const listExpenseDepartments = asyncHandler(
+  async (req: Request, res: Response) => {
+    const query = listExpenseDepartmentsQuerySchema.parse({
+      search: toOptionalQueryString(req.query.search),
+    });
 
-  const items = await budgetService.listExpenseDepartmentsCatalog(query);
-  res.status(200).json({ data: items });
-});
+    const items = await budgetService.listExpenseDepartmentsCatalog(query);
+    res.status(200).json({ data: items });
+  },
+);
 
 const getById = asyncHandler(async (req: Request, res: Response) => {
   const budget = await budgetService.getBudgetById(req.params.id);
@@ -56,6 +62,11 @@ const approve = asyncHandler(async (req: Request, res: Response) => {
   res.status(200).json({ data: budget });
 });
 
+const getPDF = asyncHandler(async (req: Request, res: Response) => {
+  const budget = await budgetService.getBudgetById(req.params.id);
+  generateBudgetPDF(budget, res);
+});
+
 export const budgetController = {
   list,
   listExpenseDepartments,
@@ -63,4 +74,5 @@ export const budgetController = {
   create,
   update,
   approve,
+  getPDF,
 };
