@@ -130,7 +130,7 @@ let productStockMovementsTableExists: boolean | null = null;
 let productNameColumnExists: boolean | null = null;
 let productLowStockAlertQuantityColumnExists: boolean | null = null;
 
-const BUDGET_VALIDITY_BUSINESS_DAYS = 15;
+const BUDGET_VALIDITY_BUSINESS_DAYS = 10;
 
 function toDateString(value: string | Date | null): string | null {
   if (value === null) {
@@ -166,8 +166,16 @@ function countBusinessDaysElapsedSince(value: string | Date): number {
   }
 
   const today = new Date();
-  const currentDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-  const endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const currentDate = new Date(
+    startDate.getFullYear(),
+    startDate.getMonth(),
+    startDate.getDate(),
+  );
+  const endDate = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+  );
 
   if (currentDate > endDate) {
     return 0;
@@ -212,16 +220,24 @@ function resolveBudgetFinancialSummary(
   const totalPrice = toMoney(toNumber(row.total_price));
   const laborCost = toMoney(toNumber(row.labor_cost));
   const materialsCost = toMoney(
-    materials.reduce((sum, material) => sum + material.quantity * (material.unitPrice ?? 0), 0),
+    materials.reduce(
+      (sum, material) => sum + material.quantity * (material.unitPrice ?? 0),
+      0,
+    ),
   );
-  const expenseDepartmentsCost = toMoney(expenseDepartments.reduce((sum, item) => sum + item.amount, 0));
+  const expenseDepartmentsCost = toMoney(
+    expenseDepartments.reduce((sum, item) => sum + item.amount, 0),
+  );
   const costsApplicableValue = toMoney(toNumber(row.costs_applicable_value));
   const costsAppliedAt = toDateString(row.costs_applied_at);
   const costsAppliedValue = toMoney(toNumber(row.costs_applied_value));
 
   let totalCost = toMoney(toNumber(row.total_cost));
 
-  if (totalCost === 0 && materialsCost + laborCost + expenseDepartmentsCost > 0) {
+  if (
+    totalCost === 0 &&
+    materialsCost + laborCost + expenseDepartmentsCost > 0
+  ) {
     totalCost = toMoney(materialsCost + laborCost + expenseDepartmentsCost);
   }
 
@@ -232,15 +248,19 @@ function resolveBudgetFinancialSummary(
     profitMargin = normalizeProfitMargin(derivedMargin);
   }
 
-  const storedProfitValue = row.profit_value === null ? Number.NaN : toNumber(row.profit_value);
-  const computedProfitValue = Number.isFinite(storedProfitValue) && storedProfitValue > 0
-    ? storedProfitValue
-    : totalCost * profitMargin;
+  const storedProfitValue =
+    row.profit_value === null ? Number.NaN : toNumber(row.profit_value);
+  const computedProfitValue =
+    Number.isFinite(storedProfitValue) && storedProfitValue > 0
+      ? storedProfitValue
+      : totalCost * profitMargin;
   const profitValue = toMoney(computedProfitValue);
 
   // Business rule requested by frontend: net profit shown as cost - profit.
   const netProfitValue = round(totalCost - profitValue, 2);
-  const remainingCostToApply = toMoney(Math.max(0, costsApplicableValue - costsAppliedValue));
+  const remainingCostToApply = toMoney(
+    Math.max(0, costsApplicableValue - costsAppliedValue),
+  );
 
   return {
     totalPrice,
@@ -260,7 +280,10 @@ function resolveBudgetFinancialSummary(
 function mapBudgetRow(row: BudgetRow): Budget {
   const financialSummary = resolveBudgetFinancialSummary(row, [], []);
   const elapsedBusinessDays = countBusinessDaysElapsedSince(row.created_at);
-  const remainingValidityBusinessDays = Math.max(0, BUDGET_VALIDITY_BUSINESS_DAYS - elapsedBusinessDays);
+  const remainingValidityBusinessDays = Math.max(
+    0,
+    BUDGET_VALIDITY_BUSINESS_DAYS - elapsedBusinessDays,
+  );
   const isExpired = elapsedBusinessDays > BUDGET_VALIDITY_BUSINESS_DAYS;
 
   return {
@@ -329,7 +352,9 @@ function normalizeMaterial(input: BudgetMaterialInput): BudgetMaterial {
   return material;
 }
 
-function normalizeExpenseDepartment(input: BudgetExpenseDepartmentInput): BudgetExpenseDepartment {
+function normalizeExpenseDepartment(
+  input: BudgetExpenseDepartmentInput,
+): BudgetExpenseDepartment {
   const department: BudgetExpenseDepartment = {
     name: input.name,
     sector: input.sector,
@@ -362,14 +387,24 @@ function resolveInputFinancialValues(payload: {
   const totalPrice = toMoney(payload.totalPrice);
   const laborCost = toMoney(payload.laborCost ?? 0);
   const materialsCost = toMoney(
-    payload.materials.reduce((sum, material) => sum + material.quantity * (material.unitPrice ?? 0), 0),
+    payload.materials.reduce(
+      (sum, material) => sum + material.quantity * (material.unitPrice ?? 0),
+      0,
+    ),
   );
-  const expenseDepartmentsCost = toMoney(payload.expenseDepartments.reduce((sum, item) => sum + item.amount, 0));
+  const expenseDepartmentsCost = toMoney(
+    payload.expenseDepartments.reduce((sum, item) => sum + item.amount, 0),
+  );
 
-  const totalCost = toMoney(payload.totalCost ?? materialsCost + laborCost + expenseDepartmentsCost);
-  const costsApplicableValue = toMoney(payload.costsApplicableValue ?? totalCost);
+  const totalCost = toMoney(
+    payload.totalCost ?? materialsCost + laborCost + expenseDepartmentsCost,
+  );
+  const costsApplicableValue = toMoney(
+    payload.costsApplicableValue ?? totalCost,
+  );
   const profitMargin = normalizeProfitMargin(
-    payload.profitMargin ?? (totalCost > 0 ? (totalPrice - totalCost) / totalCost : 0),
+    payload.profitMargin ??
+      (totalCost > 0 ? (totalPrice - totalCost) / totalCost : 0),
   );
 
   const rawProfitValue = payload.profitValue ?? totalCost * profitMargin;
@@ -385,7 +420,10 @@ function resolveInputFinancialValues(payload: {
 }
 
 function groupRows(rows: BudgetWithMaterialRow[]): Budget[] {
-  const budgetsById = new Map<string, { budget: Budget; sourceRow: BudgetWithMaterialRow }>();
+  const budgetsById = new Map<
+    string,
+    { budget: Budget; sourceRow: BudgetWithMaterialRow }
+  >();
 
   for (const row of rows) {
     const existingBudget = budgetsById.get(row.id);
@@ -407,7 +445,11 @@ function groupRows(rows: BudgetWithMaterialRow[]): Budget[] {
   const budgets: Budget[] = [];
 
   for (const { budget, sourceRow } of budgetsById.values()) {
-    const financialSummary = resolveBudgetFinancialSummary(sourceRow, budget.materials, budget.expenseDepartments);
+    const financialSummary = resolveBudgetFinancialSummary(
+      sourceRow,
+      budget.materials,
+      budget.expenseDepartments,
+    );
 
     budget.totalPrice = financialSummary.totalPrice;
     budget.totalCost = financialSummary.totalCost;
@@ -430,7 +472,9 @@ function groupRows(rows: BudgetWithMaterialRow[]): Budget[] {
   return budgets;
 }
 
-function mapExpenseDepartmentRow(row: BudgetExpenseDepartmentRow): BudgetExpenseDepartment {
+function mapExpenseDepartmentRow(
+  row: BudgetExpenseDepartmentRow,
+): BudgetExpenseDepartment {
   const item: BudgetExpenseDepartment = {
     name: row.department_name,
     sector: row.sector,
@@ -478,7 +522,10 @@ async function loadExpenseDepartmentsByBudgetIds(
   return grouped;
 }
 
-function applyExpenseDepartmentsToBudgets(budgets: Budget[], grouped: Map<string, BudgetExpenseDepartment[]>): Budget[] {
+function applyExpenseDepartmentsToBudgets(
+  budgets: Budget[],
+  grouped: Map<string, BudgetExpenseDepartment[]>,
+): Budget[] {
   for (const budget of budgets) {
     budget.expenseDepartments = grouped.get(budget.id) ?? [];
 
@@ -557,7 +604,9 @@ async function hasProductsTable(client: PoolClient): Promise<boolean> {
   return productsTableExists;
 }
 
-async function hasProductStockQuantityColumn(client: PoolClient): Promise<boolean> {
+async function hasProductStockQuantityColumn(
+  client: PoolClient,
+): Promise<boolean> {
   if (productStockQuantityColumnExists !== null) {
     return productStockQuantityColumnExists;
   }
@@ -578,7 +627,9 @@ async function hasProductStockQuantityColumn(client: PoolClient): Promise<boolea
   return productStockQuantityColumnExists;
 }
 
-async function hasProductStockMovementsTable(client: PoolClient): Promise<boolean> {
+async function hasProductStockMovementsTable(
+  client: PoolClient,
+): Promise<boolean> {
   if (productStockMovementsTableExists !== null) {
     return productStockMovementsTableExists;
   }
@@ -619,7 +670,9 @@ async function hasProductNameColumn(client: PoolClient): Promise<boolean> {
   return productNameColumnExists;
 }
 
-async function hasProductLowStockAlertQuantityColumn(client: PoolClient): Promise<boolean> {
+async function hasProductLowStockAlertQuantityColumn(
+  client: PoolClient,
+): Promise<boolean> {
   if (productLowStockAlertQuantityColumnExists !== null) {
     return productLowStockAlertQuantityColumnExists;
   }
@@ -657,9 +710,15 @@ async function ensureProductsCatalogSchema(client: PoolClient): Promise<void> {
   const hasProducts = await hasProductsTable(client);
   const hasStockColumn = await hasProductStockQuantityColumn(client);
   const hasNameColumn = await hasProductNameColumn(client);
-  const hasLowStockAlertColumn = await hasProductLowStockAlertQuantityColumn(client);
+  const hasLowStockAlertColumn =
+    await hasProductLowStockAlertQuantityColumn(client);
 
-  if (!hasProducts || !hasStockColumn || !hasNameColumn || !hasLowStockAlertColumn) {
+  if (
+    !hasProducts ||
+    !hasStockColumn ||
+    !hasNameColumn ||
+    !hasLowStockAlertColumn
+  ) {
     throw new AppError(
       "Products schema is not configured. Run sql/20260317_add_product_stock_movements.sql and sql/20260318_add_low_stock_alert_to_products.sql",
       500,
@@ -736,10 +795,14 @@ async function resolveOrCreateExpenseDepartmentCatalogId(
   const sector = department.sector.trim();
 
   if (name.length === 0 || sector.length === 0) {
-    throw new AppError("Cannot create expense department without name and sector", 400, {
-      budgetId,
-      department,
-    });
+    throw new AppError(
+      "Cannot create expense department without name and sector",
+      400,
+      {
+        budgetId,
+        department,
+      },
+    );
   }
 
   const existingByNaturalKeyResult = await client.query<{ id: string }>(
@@ -753,7 +816,10 @@ async function resolveOrCreateExpenseDepartmentCatalogId(
     [name, sector],
   );
 
-  const resolvedId = department.expenseDepartmentId?.trim() || existingByNaturalKeyResult.rows[0]?.id || randomUUID();
+  const resolvedId =
+    department.expenseDepartmentId?.trim() ||
+    existingByNaturalKeyResult.rows[0]?.id ||
+    randomUUID();
 
   await client.query(
     `
@@ -788,7 +854,11 @@ async function resolveMaterialsWithProducts(
   const resolvedMaterials: BudgetMaterial[] = [];
 
   for (const material of materials) {
-    const productId = await resolveOrCreateProductIdForMaterial(client, budgetId, material);
+    const productId = await resolveOrCreateProductIdForMaterial(
+      client,
+      budgetId,
+      material,
+    );
     resolvedMaterials.push({
       ...material,
       productId,
@@ -806,7 +876,11 @@ async function resolveExpenseDepartmentsWithCatalog(
   const resolvedDepartments: BudgetExpenseDepartment[] = [];
 
   for (const department of departments) {
-    const expenseDepartmentId = await resolveOrCreateExpenseDepartmentCatalogId(client, budgetId, department);
+    const expenseDepartmentId = await resolveOrCreateExpenseDepartmentCatalogId(
+      client,
+      budgetId,
+      department,
+    );
     resolvedDepartments.push({
       ...department,
       expenseDepartmentId,
@@ -853,10 +927,14 @@ async function resolveProductIdForBudgetMaterial(
   );
 
   if (productByNameResult.rows.length === 0) {
-    throw new AppError("Material product was not found in products table", 400, {
-      budgetId,
-      productName: material.product_name,
-    });
+    throw new AppError(
+      "Material product was not found in products table",
+      400,
+      {
+        budgetId,
+        productName: material.product_name,
+      },
+    );
   }
 
   if (productByNameResult.rows.length > 1) {
@@ -869,7 +947,10 @@ async function resolveProductIdForBudgetMaterial(
   return productByNameResult.rows[0].id;
 }
 
-async function deductBudgetMaterialsFromStock(client: PoolClient, budgetId: string): Promise<void> {
+async function deductBudgetMaterialsFromStock(
+  client: PoolClient,
+  budgetId: string,
+): Promise<void> {
   await ensureStockControlSchema(client);
 
   const materialsResult = await client.query<BudgetMaterialUsageRow>(
@@ -888,7 +969,11 @@ async function deductBudgetMaterialsFromStock(client: PoolClient, budgetId: stri
 
   for (const material of materialsResult.rows) {
     const quantityToDeduct = toNumber(material.quantity);
-    const resolvedProductId = await resolveProductIdForBudgetMaterial(client, budgetId, material);
+    const resolvedProductId = await resolveProductIdForBudgetMaterial(
+      client,
+      budgetId,
+      material,
+    );
 
     if (quantityToDeduct <= 0) {
       continue;
@@ -908,7 +993,9 @@ async function deductBudgetMaterialsFromStock(client: PoolClient, budgetId: stri
     );
 
     if (stockUpdateResult.rows.length === 0) {
-      const productResult = await client.query<{ stock_quantity: string | number }>(
+      const productResult = await client.query<{
+        stock_quantity: string | number;
+      }>(
         `
           SELECT stock_quantity
           FROM public.products
@@ -918,11 +1005,15 @@ async function deductBudgetMaterialsFromStock(client: PoolClient, budgetId: stri
       );
 
       if (productResult.rows.length === 0) {
-        throw new AppError("Material product was not found in products table", 400, {
-          budgetId,
-          productId: resolvedProductId,
-          productName: material.product_name,
-        });
+        throw new AppError(
+          "Material product was not found in products table",
+          400,
+          {
+            budgetId,
+            productId: resolvedProductId,
+            productName: material.product_name,
+          },
+        );
       }
 
       throw new AppError("Insufficient stock to approve budget", 409, {
@@ -947,12 +1038,21 @@ async function deductBudgetMaterialsFromStock(client: PoolClient, budgetId: stri
         )
         VALUES ($1, 'saida', $2, $3, $4, 'budget', $5);
       `,
-      [resolvedProductId, quantityToDeduct, material.unit, "Automatic outbound movement from budget approval", budgetId],
+      [
+        resolvedProductId,
+        quantityToDeduct,
+        material.unit,
+        "Automatic outbound movement from budget approval",
+        budgetId,
+      ],
     );
   }
 }
 
-async function listByIdWithClient(client: PoolClient, id: string): Promise<Budget | undefined> {
+async function listByIdWithClient(
+  client: PoolClient,
+  id: string,
+): Promise<Budget | undefined> {
   try {
     const result = await client.query<BudgetWithMaterialRow>(
       `
@@ -996,7 +1096,10 @@ async function listByIdWithClient(client: PoolClient, id: string): Promise<Budge
     }
 
     const budget = groupRows(result.rows)[0];
-    const groupedExpenseDepartments = await loadExpenseDepartmentsByBudgetIds(client, [id]);
+    const groupedExpenseDepartments = await loadExpenseDepartmentsByBudgetIds(
+      client,
+      [id],
+    );
     applyExpenseDepartmentsToBudgets([budget], groupedExpenseDepartments);
     return budget;
   } catch (error) {
@@ -1004,7 +1107,9 @@ async function listByIdWithClient(client: PoolClient, id: string): Promise<Budge
   }
 }
 
-async function findAll(query: ListBudgetsRecordInput): Promise<PaginatedBudgets> {
+async function findAll(
+  query: ListBudgetsRecordInput,
+): Promise<PaginatedBudgets> {
   const statusFilter = query.status ?? null;
   const categoryFilter = query.category ?? null;
   const startDateFilter = query.startDate ?? null;
@@ -1024,7 +1129,13 @@ async function findAll(query: ListBudgetsRecordInput): Promise<PaginatedBudgets>
           AND ($4::timestamptz IS NULL OR COALESCE(b.approved_at, b.created_at) <= $4)
           AND ($5::text IS NULL OR LOWER(b.client_name) LIKE CONCAT('%', LOWER(BTRIM($5)), '%'));
       `,
-      [statusFilter, categoryFilter, startDateFilter, endDateFilter, clientNameFilter],
+      [
+        statusFilter,
+        categoryFilter,
+        startDateFilter,
+        endDateFilter,
+        clientNameFilter,
+      ],
     );
 
     const totalItems = toNumber(countResult.rows[0]?.total_count ?? 0);
@@ -1077,7 +1188,15 @@ async function findAll(query: ListBudgetsRecordInput): Promise<PaginatedBudgets>
           ON bm.budget_id = b.id
         ORDER BY COALESCE(b.approved_at, b.created_at) DESC, b.created_at DESC, bm.id ASC;
       `,
-      [statusFilter, categoryFilter, startDateFilter, endDateFilter, clientNameFilter, query.limit, offset],
+      [
+        statusFilter,
+        categoryFilter,
+        startDateFilter,
+        endDateFilter,
+        clientNameFilter,
+        query.limit,
+        offset,
+      ],
     );
 
     const budgets = groupRows(result.rows);
@@ -1087,7 +1206,10 @@ async function findAll(query: ListBudgetsRecordInput): Promise<PaginatedBudgets>
     );
 
     return {
-      data: applyExpenseDepartmentsToBudgets(budgets, groupedExpenseDepartments),
+      data: applyExpenseDepartmentsToBudgets(
+        budgets,
+        groupedExpenseDepartments,
+      ),
       pagination: {
         page: query.page,
         limit: query.limit,
@@ -1112,7 +1234,11 @@ async function findById(id: string): Promise<Budget | undefined> {
   }
 }
 
-async function insertMaterials(client: PoolClient, budgetId: string, materials: BudgetMaterial[]): Promise<void> {
+async function insertMaterials(
+  client: PoolClient,
+  budgetId: string,
+  materials: BudgetMaterial[],
+): Promise<void> {
   for (const material of materials) {
     await client.query(
       `
@@ -1155,7 +1281,13 @@ async function insertExpenseDepartments(
         )
         VALUES ($1, $2, $3, $4, $5);
       `,
-      [budgetId, department.expenseDepartmentId ?? null, department.name, department.sector, department.amount],
+      [
+        budgetId,
+        department.expenseDepartmentId ?? null,
+        department.name,
+        department.sector,
+        department.amount,
+      ],
     );
   }
 }
@@ -1203,13 +1335,20 @@ async function create(payload: CreateBudgetRecordInput): Promise<Budget> {
 
     const budgetId = randomUUID();
     const normalizedMaterials = payload.materials.map(normalizeMaterial);
-    const normalizedExpenseDepartments = (payload.expenseDepartments ?? []).map(normalizeExpenseDepartment);
-    const materialsWithProducts = await resolveMaterialsWithProducts(client, budgetId, normalizedMaterials);
-    const expenseDepartmentsWithCatalog = await resolveExpenseDepartmentsWithCatalog(
+    const normalizedExpenseDepartments = (payload.expenseDepartments ?? []).map(
+      normalizeExpenseDepartment,
+    );
+    const materialsWithProducts = await resolveMaterialsWithProducts(
       client,
       budgetId,
-      normalizedExpenseDepartments,
+      normalizedMaterials,
     );
+    const expenseDepartmentsWithCatalog =
+      await resolveExpenseDepartmentsWithCatalog(
+        client,
+        budgetId,
+        normalizedExpenseDepartments,
+      );
     const financialValues = resolveInputFinancialValues({
       totalPrice: payload.totalPrice,
       totalCost: payload.totalCost,
@@ -1284,7 +1423,11 @@ async function create(payload: CreateBudgetRecordInput): Promise<Budget> {
     );
 
     await insertMaterials(client, budgetId, materialsWithProducts);
-    await insertExpenseDepartments(client, budgetId, expenseDepartmentsWithCatalog);
+    await insertExpenseDepartments(
+      client,
+      budgetId,
+      expenseDepartmentsWithCatalog,
+    );
 
     await client.query("COMMIT");
 
@@ -1303,20 +1446,30 @@ async function create(payload: CreateBudgetRecordInput): Promise<Budget> {
   }
 }
 
-async function save(id: string, payload: SaveBudgetRecordInput): Promise<Budget | undefined> {
+async function save(
+  id: string,
+  payload: SaveBudgetRecordInput,
+): Promise<Budget | undefined> {
   const client = await pool.connect();
 
   try {
     await client.query("BEGIN");
 
     const normalizedMaterials = payload.materials.map(normalizeMaterial);
-    const normalizedExpenseDepartments = payload.expenseDepartments.map(normalizeExpenseDepartment);
-    const materialsWithProducts = await resolveMaterialsWithProducts(client, id, normalizedMaterials);
-    const expenseDepartmentsWithCatalog = await resolveExpenseDepartmentsWithCatalog(
+    const normalizedExpenseDepartments = payload.expenseDepartments.map(
+      normalizeExpenseDepartment,
+    );
+    const materialsWithProducts = await resolveMaterialsWithProducts(
       client,
       id,
-      normalizedExpenseDepartments,
+      normalizedMaterials,
     );
+    const expenseDepartmentsWithCatalog =
+      await resolveExpenseDepartmentsWithCatalog(
+        client,
+        id,
+        normalizedExpenseDepartments,
+      );
 
     const financialValues = resolveInputFinancialValues({
       totalPrice: payload.totalPrice,

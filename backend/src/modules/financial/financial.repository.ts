@@ -57,7 +57,9 @@ async function createInstallments(
   installments: Array<{ amount: number; dueDate: Date; installment: number }>,
 ): Promise<AccountReceivable[]> {
   // Remove existing installments for this order before recreating
-  await pool.query(`DELETE FROM accounts_receivable WHERE order_id = $1`, [input.orderId]);
+  await pool.query(`DELETE FROM accounts_receivable WHERE order_id = $1`, [
+    input.orderId,
+  ]);
 
   const created: AccountReceivable[] = [];
   for (const inst of installments) {
@@ -65,14 +67,23 @@ async function createInstallments(
     const result = await pool.query<AccountReceivableRow>(
       `INSERT INTO accounts_receivable (id, order_id, amount, due_date, installment)
        VALUES ($1,$2,$3,$4,$5) RETURNING *`,
-      [id, input.orderId, inst.amount, inst.dueDate.toISOString().split("T")[0], inst.installment],
+      [
+        id,
+        input.orderId,
+        inst.amount,
+        inst.dueDate.toISOString().split("T")[0],
+        inst.installment,
+      ],
     );
     created.push(rowToReceivable(result.rows[0]));
   }
   return created;
 }
 
-async function updateReceivable(id: string, input: UpdateReceivableInput): Promise<AccountReceivable | null> {
+async function updateReceivable(
+  id: string,
+  input: UpdateReceivableInput,
+): Promise<AccountReceivable | null> {
   const fields: string[] = [];
   const params: unknown[] = [];
 
@@ -129,13 +140,23 @@ async function getCashflowSummary(): Promise<CashflowSummary> {
      ORDER BY month ASC`,
   );
 
+  const projectedProfitResult = await pool.query<{ total: string | number }>(
+    `SELECT COALESCE(SUM(profit_value), 0) AS total
+     FROM budgets
+     WHERE status IN ('pre_approved', 'approved')`,
+  );
+
   const expectedIncome = Number(incomeResult.rows[0]?.total ?? 0);
   const expectedExpenses = Number(expenseResult.rows[0]?.total ?? 0);
+  const projectedProfit = Number(projectedProfitResult.rows[0]?.total ?? 0);
 
   return {
     expectedIncome,
     expectedExpenses,
     cashflow: expectedIncome - expectedExpenses,
+    projectedProfit,
+    projectedProfitCashflow:
+      expectedIncome + projectedProfit - expectedExpenses,
     receivablesByMonth: receivablesByMonthResult.rows.map((r) => ({
       month: r.month,
       amount: Number(r.amount),

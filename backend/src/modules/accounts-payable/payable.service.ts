@@ -3,10 +3,18 @@ import { payableRepository } from "./payable.repository";
 import {
   AccountPayable,
   CreatePayableInput,
+  PayableSummary,
   UpdatePayableInput,
 } from "./payable.schema";
 
+const PAID_RETENTION_DAYS = 60;
+
+async function runCleanup(): Promise<void> {
+  await payableRepository.purgePaidOlderThan(PAID_RETENTION_DAYS);
+}
+
 async function list(status?: string): Promise<AccountPayable[]> {
+  await runCleanup();
   return payableRepository.findAll(status);
 }
 
@@ -42,7 +50,8 @@ async function remove(id: string): Promise<void> {
   await payableRepository.remove(id);
 }
 
-async function getSummary() {
+async function getSummary(): Promise<PayableSummary> {
+  await runCleanup();
   return payableRepository.getSummary();
 }
 

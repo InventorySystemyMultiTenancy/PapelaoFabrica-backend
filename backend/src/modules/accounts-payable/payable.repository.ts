@@ -140,10 +140,18 @@ async function getSummary(): Promise<{
   totalPending: number;
   totalPaid: number;
   totalOverdue: number;
+  projectedProfitCoverage: number;
+  projectedProfitBalance: number;
 }> {
   const result = await pool.query<{ status: string; total: string }>(
     `SELECT status, SUM(amount) as total FROM accounts_payable GROUP BY status`,
   );
+  const projectedResult = await pool.query<{ projected_profit: string }>(
+    `SELECT COALESCE(SUM(profit_value), 0) AS projected_profit
+     FROM budgets
+     WHERE status IN ('pre_approved', 'approved')`,
+  );
+
   let totalPending = 0,
     totalPaid = 0,
     totalOverdue = 0;
@@ -152,7 +160,38 @@ async function getSummary(): Promise<{
     else if (row.status === "paid") totalPaid = Number(row.total);
     else if (row.status === "overdue") totalOverdue = Number(row.total);
   }
-  return { totalPending, totalPaid, totalOverdue };
+
+  const projectedProfit = Number(
+    projectedResult.rows[0]?.projected_profit ?? 0,
+  );
+  const pendingAndOverdue = totalPending + totalOverdue;
+  const projectedProfitBalance = projectedProfit - pendingAndOverdue;
+  const projectedProfitCoverage =
+    pendingAndOverdue > 0
+      ? projectedProfit / pendingAndOverdue
+      : projectedProfit > 0
+        ? Infinity
+        : 0;
+
+  return {
+    totalPending,
+    totalPaid,
+    totalOverdue,
+    projectedProfitCoverage,
+    projectedProfitBalance,
+  };
+}
+
+async function purgePaidOlderThan(days: number): Promise<number> {
+  const result = await pool.query(
+    `DELETE FROM accounts_payable
+     WHERE status = 'paid'
+       AND paid_at IS NOT NULL
+       AND paid_at <= NOW() - ($1::text || ' days')::interval`,
+    [Math.max(1, Math.trunc(days))],
+  );
+
+  return result.rowCount ?? 0;
 }
 
 export const payableRepository = {
@@ -162,4 +201,5 @@ export const payableRepository = {
   update,
   remove,
   getSummary,
+  purgePaidOlderThan,
 };

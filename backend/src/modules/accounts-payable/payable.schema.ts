@@ -67,3 +67,11 @@ export interface AccountPayable {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface PayableSummary {
+  totalPending: number;
+  totalPaid: number;
+  totalOverdue: number;
+  projectedProfitCoverage: number;
+  projectedProfitBalance: number;
+}

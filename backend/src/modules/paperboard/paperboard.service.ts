@@ -1,7 +1,10 @@
 import { AppError } from "../../utils/app-error";
 import { budgetRepository } from "../../repositories/budget.repository";
 import { paperboardRepository } from "./paperboard.repository";
-import { CreatePaperboardConfigInput, PaperboardConfig } from "./paperboard.schema";
+import {
+  CreatePaperboardConfigInput,
+  PaperboardConfig,
+} from "./paperboard.schema";
 
 async function getConfig(budgetId: string): Promise<PaperboardConfig> {
   const config = await paperboardRepository.findByBudgetId(budgetId);
@@ -11,7 +14,10 @@ async function getConfig(budgetId: string): Promise<PaperboardConfig> {
   return config;
 }
 
-async function upsertConfig(budgetId: string, input: CreatePaperboardConfigInput): Promise<PaperboardConfig> {
+async function upsertConfig(
+  budgetId: string,
+  input: CreatePaperboardConfigInput,
+): Promise<PaperboardConfig> {
   const budget = await budgetRepository.findById(budgetId);
   if (!budget) {
     throw new AppError("Budget not found", 404);
@@ -19,7 +25,25 @@ async function upsertConfig(budgetId: string, input: CreatePaperboardConfigInput
 
   // outsourcedCut only allowed when quantity >= 500
   if (input.outsourcedCut && input.quantity < 500) {
-    throw new AppError("outsourcedCut só é permitido quando quantity >= 500kg", 422);
+    throw new AppError(
+      "outsourcedCut só é permitido quando quantity >= 500kg",
+      422,
+    );
+  }
+
+  if (
+    input.sheetsPerBundle !== undefined &&
+    input.sheetsPerBundle !== null &&
+    input.sheetsPerBundle <= 0
+  ) {
+    throw new AppError("sheetsPerBundle deve ser maior que zero", 422);
+  }
+
+  if (
+    input.lossPercentage !== undefined &&
+    (input.lossPercentage < 0 || input.lossPercentage > 100)
+  ) {
+    throw new AppError("lossPercentage deve estar entre 0 e 100", 422);
   }
 
   // clichê data required only on first purchase
@@ -32,7 +56,34 @@ async function upsertConfig(budgetId: string, input: CreatePaperboardConfigInput
     }
   }
 
-  return paperboardRepository.upsert(budgetId, input);
+  const config = await paperboardRepository.upsert(budgetId, input);
+
+  const totalCost = Number(config.estimatedCost.toFixed(2));
+  const totalPrice = Number(config.suggestedPrice.toFixed(2));
+  const safeProfitValue = Math.max(totalPrice - totalCost, 0);
+  const safeProfitMargin = totalCost > 0 ? safeProfitValue / totalCost : 0;
+
+  await budgetRepository.save(budgetId, {
+    clientName: budget.clientName,
+    category: budget.category,
+    description: budget.description,
+    status: budget.status,
+    estimatedDeliveryBusinessDays: budget.estimatedDeliveryBusinessDays,
+    paymentTerms: budget.paymentTerms,
+    deliveryDate: budget.deliveryDate,
+    totalPrice,
+    totalCost,
+    costsApplicableValue: budget.costsApplicableValue,
+    laborCost: budget.laborCost,
+    profitMargin: safeProfitMargin,
+    profitValue: safeProfitValue,
+    notes: budget.notes,
+    approvedAt: budget.approvedAt,
+    materials: budget.materials,
+    expenseDepartments: budget.expenseDepartments,
+  });
+
+  return config;
 }
 
 async function removeConfig(budgetId: string): Promise<void> {
