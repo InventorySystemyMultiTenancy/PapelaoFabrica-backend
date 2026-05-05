@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS purchase_orders (
 CREATE TABLE IF NOT EXISTS purchase_order_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   purchase_order_id UUID NOT NULL REFERENCES purchase_orders(id) ON DELETE CASCADE,
-  product_id UUID REFERENCES products(id),
+  product_id TEXT REFERENCES products(id),
   description VARCHAR(255) NOT NULL,
   gramatura NUMERIC(10,2),
   sheet_width_cm NUMERIC(10,2),
@@ -32,3 +32,26 @@ CREATE TABLE IF NOT EXISTS purchase_order_items (
 
 CREATE INDEX IF NOT EXISTS idx_purchase_orders_status ON purchase_orders(status);
 CREATE INDEX IF NOT EXISTS idx_purchase_order_items_po_id ON purchase_order_items(purchase_order_id);
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'purchase_order_items'
+      AND column_name = 'product_id'
+      AND udt_name = 'uuid'
+  ) THEN
+    ALTER TABLE public.purchase_order_items
+      DROP CONSTRAINT IF EXISTS purchase_order_items_product_id_fkey;
+
+    ALTER TABLE public.purchase_order_items
+      ALTER COLUMN product_id TYPE TEXT USING product_id::text;
+
+    ALTER TABLE public.purchase_order_items
+      ADD CONSTRAINT purchase_order_items_product_id_fkey
+      FOREIGN KEY (product_id)
+      REFERENCES public.products(id);
+  END IF;
+END $$;

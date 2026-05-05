@@ -10,7 +10,7 @@ export const purchaseOrderStatusSchema = z.enum([
 export type PurchaseOrderStatus = z.infer<typeof purchaseOrderStatusSchema>;
 
 export const purchaseOrderItemSchema = z.object({
-  productId: z.string().uuid().optional().nullable(),
+  productId: z.string().trim().min(1).optional().nullable(),
   description: z.string().trim().min(1, "descrição é obrigatória").max(255),
   gramatura: z.number().positive().optional().nullable(),
   sheetWidthCm: z.number().positive().optional().nullable(),

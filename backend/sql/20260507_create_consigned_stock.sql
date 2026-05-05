@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS consigned_stock (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   client_id TEXT NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
-  product_id UUID REFERENCES products(id),
+  product_id TEXT REFERENCES products(id),
   product_name VARCHAR(255) NOT NULL,
   quantity INTEGER NOT NULL DEFAULT 0,
   notes TEXT,
@@ -46,5 +46,28 @@ BEGIN
       FOREIGN KEY (client_id)
       REFERENCES public.clients(id)
       ON DELETE CASCADE;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'consigned_stock'
+      AND column_name = 'product_id'
+      AND udt_name = 'uuid'
+  ) THEN
+    ALTER TABLE public.consigned_stock
+      DROP CONSTRAINT IF EXISTS consigned_stock_product_id_fkey;
+
+    ALTER TABLE public.consigned_stock
+      ALTER COLUMN product_id TYPE TEXT USING product_id::text;
+
+    ALTER TABLE public.consigned_stock
+      ADD CONSTRAINT consigned_stock_product_id_fkey
+      FOREIGN KEY (product_id)
+      REFERENCES public.products(id);
   END IF;
 END $$;
