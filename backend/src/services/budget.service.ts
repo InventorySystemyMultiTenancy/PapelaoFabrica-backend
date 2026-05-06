@@ -29,6 +29,7 @@ function resolveApprovedAt(
   return currentApprovedAt;
 }
 
+
 async function listBudgets(
   query: ListBudgetsQueryInput,
 ): Promise<PaginatedBudgets> {
