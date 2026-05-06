@@ -34,6 +34,7 @@ apiRoutes.use("/logistics", logisticsRoutes);
 apiRoutes.use("/budgets", budgetRoutes);
 apiRoutes.use("/products", productRoutes);
 apiRoutes.use("/stock", stockRoutes);
+apiRoutes.use("/production", productionRoutes);
 apiRoutes.use("/productions", productionRoutes);
 apiRoutes.use("/public", publicRoutes);
 apiRoutes.use("/employees", employeeRoutes);
