@@ -91,7 +91,7 @@ const createBudgetBaseSchema = z.object({
   profitValue: monetarySchema.optional(),
   notes: optionalTextField(2000),
   status: budgetStatusSchema.default("pending"),
-  materials: z.array(budgetMaterialSchema).min(1, "At least one material is required"),
+  materials: z.array(budgetMaterialSchema).default([]),
   expenseDepartments: z.array(budgetExpenseDepartmentSchema).default([]),
 });
 
@@ -112,7 +112,7 @@ const updateBudgetBaseSchema = z
     profitValue: monetarySchema.optional(),
     notes: optionalTextField(2000),
     status: budgetStatusSchema.optional(),
-    materials: z.array(budgetMaterialSchema).min(1, "At least one material is required").optional(),
+    materials: z.array(budgetMaterialSchema).optional(),
     expenseDepartments: z.array(budgetExpenseDepartmentSchema).optional(),
   })
   .refine((payload) => Object.keys(payload).length > 0, {
