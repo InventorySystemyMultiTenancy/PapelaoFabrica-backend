@@ -27,6 +27,7 @@ interface BudgetRow {
   delivery_date: string | Date | null;
   total_price: string | number;
   total_cost: string | number | null;
+  freight_value: string | number | null;
   costs_applicable_value: string | number | null;
   profit_margin: string | number | null;
   profit_value: string | number | null;
@@ -228,15 +229,21 @@ function resolveBudgetFinancialSummary(
   const expenseDepartmentsCost = toMoney(
     expenseDepartments.reduce((sum, item) => sum + item.amount, 0),
   );
+
+  const freightValue = toMoney(toNumber(row.freight_value));
+
   const costsApplicableValue = toMoney(toNumber(row.costs_applicable_value));
   const costsAppliedAt = toDateString(row.costs_applied_at);
   const costsAppliedValue = toMoney(toNumber(row.costs_applied_value));
 
+  // total_cost persistido NÃO considera frete; portanto somamos aqui.
   let totalCost = toMoney(toNumber(row.total_cost));
 
   if (totalCost === 0 && materialsCost > 0) {
     totalCost = materialsCost;
   }
+
+  totalCost = toMoney(totalCost + freightValue);
 
   let profitMargin = normalizeProfitMargin(toNumber(row.profit_margin));
 
@@ -272,7 +279,8 @@ function resolveBudgetFinancialSummary(
     laborCost,
     costsAppliedValue,
     costsAppliedAt,
-    remainingCostToApply,
+      remainingCostToApply,
+    freightValue: toMoney(toNumber(row.freight_value)),
     profitMargin,
     profitMarginPercentage,
     profitValue,
@@ -298,6 +306,7 @@ function mapBudgetRow(row: BudgetRow): Budget {
     estimatedDeliveryBusinessDays: row.estimated_delivery_business_days,
     paymentTerms: row.payment_terms,
     deliveryDate: toDateString(row.delivery_date),
+    freightValue: toMoney(toNumber(row.freight_value)),
     validityBusinessDays: BUDGET_VALIDITY_BUSINESS_DAYS,
     elapsedBusinessDays,
     remainingValidityBusinessDays,
@@ -556,7 +565,9 @@ function applyExpenseDepartmentsToBudgets(
         delivery_date: budget.deliveryDate,
         total_price: budget.totalPrice,
         total_cost: budget.totalCost,
+        freight_value: (budget as any).freightValue,
         costs_applicable_value: budget.costsApplicableValue,
+
         profit_margin: budget.profitMargin,
         profit_value: budget.profitValue,
         labor_cost: budget.laborCost,
@@ -1084,10 +1095,12 @@ async function listByIdWithClient(
           b.delivery_date,
           b.total_price,
           b.total_cost,
+          b.freight_value,
           b.costs_applicable_value,
           b.profit_margin,
           b.profit_value,
           b.labor_cost,
+
           b.notes,
           b.approved_at,
           b.costs_applied_at,
@@ -1183,10 +1196,12 @@ async function findAll(
           b.delivery_date,
           b.total_price,
           b.total_cost,
+          b.freight_value,
           b.costs_applicable_value,
           b.profit_margin,
           b.profit_value,
           b.labor_cost,
+
           b.notes,
           b.approved_at,
           b.costs_applied_at,
@@ -1390,7 +1405,9 @@ async function create(payload: CreateBudgetRecordInput): Promise<Budget> {
           delivery_date,
           total_price,
           total_cost,
+          freight_value,
           costs_applicable_value,
+
           profit_margin,
           profit_value,
           labor_cost,
@@ -1545,8 +1562,8 @@ async function save(
           labor_cost,
           notes,
           approved_at,
-            costs_applied_at,
-            costs_applied_value,
+          costs_applied_at,
+          costs_applied_value,
           created_at,
           updated_at;
       `,

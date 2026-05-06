@@ -82,6 +82,10 @@ function normalizeBudgetPayloadAliases(input: unknown): unknown {
     payload.totalPrice = payload.final_price;
   }
 
+  if (payload.freightValue === undefined && payload.freight_value !== undefined) {
+    payload.freightValue = payload.freight_value;
+  }
+
   return payload;
 }
 
@@ -94,6 +98,7 @@ const createBudgetBaseSchema = z.object({
   totalPrice: monetarySchema.optional(),
   finalPrice: monetarySchema.optional(),
   totalCost: monetarySchema.optional(),
+  freightValue: monetarySchema.optional(),
   costsApplicableValue: monetarySchema.optional(),
   laborCost: monetarySchema.optional(),
   profitMargin: profitMarginSchema.optional(),
@@ -116,6 +121,7 @@ const updateBudgetBaseSchema = z
     totalPrice: monetarySchema.optional(),
     finalPrice: monetarySchema.optional(),
     totalCost: monetarySchema.optional(),
+    freightValue: monetarySchema.optional(),
     costsApplicableValue: monetarySchema.optional(),
     laborCost: monetarySchema.optional(),
     profitMargin: profitMarginSchema.optional(),
@@ -181,6 +187,7 @@ export interface BudgetFinancialSummary {
   totalPrice: number;
   finalPrice: number;
   totalCost: number;
+  freightValue: number;
   costsApplicableValue: number;
   expenseDepartmentsCost: number;
   laborCost: number;
@@ -209,6 +216,7 @@ export interface Budget {
   totalPrice: number;
   finalPrice: number;
   totalCost: number;
+  freightValue: number;
   costsApplicableValue: number;
   laborCost: number;
   profitMargin: number;

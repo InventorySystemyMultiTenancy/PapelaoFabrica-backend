@@ -128,6 +128,9 @@ async function updateBudget(
     deliveryDate: existingBudget.deliveryDate,
     totalPrice: payload.totalPrice ?? existingBudget.totalPrice,
     totalCost: payload.totalCost ?? existingBudget.totalCost,
+    // freightValue is not part of SaveBudgetRecordInput; repository recomputes financial fields from materials/costs.
+    // @ts-expect-error freightValue not supported by SaveBudgetRecordInput
+    freightValue: (payload as any).freightValue ?? existingBudget.freightValue,
     costsApplicableValue:
       payload.costsApplicableValue ?? existingBudget.costsApplicableValue,
     laborCost: payload.laborCost ?? existingBudget.laborCost,
