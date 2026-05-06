@@ -11,7 +11,11 @@ import {
 } from "../models/budget.model";
 import { budgetRepository } from "../repositories/budget.repository";
 
-function resolveApprovedAt(currentStatus: BudgetStatus, nextStatus: BudgetStatus, currentApprovedAt: string | null) {
+function resolveApprovedAt(
+  currentStatus: BudgetStatus,
+  nextStatus: BudgetStatus,
+  currentApprovedAt: string | null,
+) {
   void currentStatus;
 
   if (nextStatus === "approved") {
@@ -25,7 +29,9 @@ function resolveApprovedAt(currentStatus: BudgetStatus, nextStatus: BudgetStatus
   return currentApprovedAt;
 }
 
-async function listBudgets(query: ListBudgetsQueryInput): Promise<PaginatedBudgets> {
+async function listBudgets(
+  query: ListBudgetsQueryInput,
+): Promise<PaginatedBudgets> {
   await budgetRepository.runLifecycleMaintenance();
   return budgetRepository.findAll(query);
 }
@@ -73,7 +79,10 @@ async function createBudget(payload: CreateBudgetInput): Promise<Budget> {
   return approvedBudget;
 }
 
-async function updateBudget(id: string, payload: UpdateBudgetInput): Promise<Budget> {
+async function updateBudget(
+  id: string,
+  payload: UpdateBudgetInput,
+): Promise<Budget> {
   await budgetRepository.runLifecycleMaintenance();
   const existingBudget = await budgetRepository.findById(id);
 
@@ -82,7 +91,8 @@ async function updateBudget(id: string, payload: UpdateBudgetInput): Promise<Bud
   }
 
   const nextStatus = payload.status ?? existingBudget.status;
-  const shouldApproveOnUpdate = existingBudget.status !== "approved" && nextStatus === "approved";
+  const shouldApproveOnUpdate =
+    existingBudget.status !== "approved" && nextStatus === "approved";
   const nextMaterials: Budget["materials"] = payload.materials
     ? payload.materials.map((material) => ({
         productId: material.productId,
@@ -92,14 +102,15 @@ async function updateBudget(id: string, payload: UpdateBudgetInput): Promise<Bud
         unitPrice: material.unitPrice ?? null,
       }))
     : existingBudget.materials;
-  const nextExpenseDepartments: Budget["expenseDepartments"] = payload.expenseDepartments
-    ? payload.expenseDepartments.map((department) => ({
-        expenseDepartmentId: department.expenseDepartmentId,
-        name: department.name,
-        sector: department.sector,
-        amount: department.amount,
-      }))
-    : existingBudget.expenseDepartments;
+  const nextExpenseDepartments: Budget["expenseDepartments"] =
+    payload.expenseDepartments
+      ? payload.expenseDepartments.map((department) => ({
+          expenseDepartmentId: department.expenseDepartmentId,
+          name: department.name,
+          sector: department.sector,
+          amount: department.amount,
+        }))
+      : existingBudget.expenseDepartments;
 
   const updatedBudget = await budgetRepository.save(id, {
     clientName: payload.clientName ?? existingBudget.clientName,
@@ -110,18 +121,26 @@ async function updateBudget(id: string, payload: UpdateBudgetInput): Promise<Bud
       payload.estimatedDeliveryBusinessDays !== undefined
         ? payload.estimatedDeliveryBusinessDays
         : existingBudget.estimatedDeliveryBusinessDays,
-    paymentTerms: payload.paymentTerms !== undefined ? payload.paymentTerms : existingBudget.paymentTerms,
+    paymentTerms:
+      payload.paymentTerms !== undefined
+        ? payload.paymentTerms
+        : existingBudget.paymentTerms,
     deliveryDate: existingBudget.deliveryDate,
     totalPrice: payload.totalPrice ?? existingBudget.totalPrice,
     totalCost: payload.totalCost ?? existingBudget.totalCost,
-    costsApplicableValue: payload.costsApplicableValue ?? existingBudget.costsApplicableValue,
+    costsApplicableValue:
+      payload.costsApplicableValue ?? existingBudget.costsApplicableValue,
     laborCost: payload.laborCost ?? existingBudget.laborCost,
     profitMargin: payload.profitMargin ?? existingBudget.profitMargin,
     profitValue: payload.profitValue ?? existingBudget.profitValue,
     notes: payload.notes !== undefined ? payload.notes : existingBudget.notes,
     approvedAt: shouldApproveOnUpdate
       ? existingBudget.approvedAt
-      : resolveApprovedAt(existingBudget.status, nextStatus, existingBudget.approvedAt),
+      : resolveApprovedAt(
+          existingBudget.status,
+          nextStatus,
+          existingBudget.approvedAt,
+        ),
     materials: nextMaterials,
     expenseDepartments: nextExpenseDepartments,
   });
@@ -154,6 +173,15 @@ async function approveBudget(id: string): Promise<Budget> {
   return budget;
 }
 
+async function deleteBudget(id: string): Promise<void> {
+  const removed = await budgetRepository.remove(id);
+  if (!removed) {
+    throw Object.assign(new Error("Orçamento não encontrado."), {
+      statusCode: 404,
+    });
+  }
+}
+
 export const budgetService = {
   listBudgets,
   listExpenseDepartmentsCatalog,
@@ -161,4 +189,5 @@ export const budgetService = {
   createBudget,
   updateBudget,
   approveBudget,
+  deleteBudget,
 };

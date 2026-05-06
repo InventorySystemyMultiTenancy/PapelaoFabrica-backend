@@ -67,6 +67,11 @@ const getPDF = asyncHandler(async (req: Request, res: Response) => {
   generateBudgetPDF(budget, res);
 });
 
+const remove = asyncHandler(async (req: Request, res: Response) => {
+  await budgetService.deleteBudget(req.params.id);
+  res.status(204).end();
+});
+
 export const budgetController = {
   list,
   listExpenseDepartments,
@@ -75,4 +80,5 @@ export const budgetController = {
   update,
   approve,
   getPDF,
+  remove,
 };

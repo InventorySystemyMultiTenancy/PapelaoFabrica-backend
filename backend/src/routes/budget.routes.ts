@@ -29,4 +29,6 @@ budgetRoutes.patch(
 );
 budgetRoutes.patch("/:id/approve", budgetController.approve);
 
+budgetRoutes.delete("/:id", budgetController.remove);
+
 export { budgetRoutes };

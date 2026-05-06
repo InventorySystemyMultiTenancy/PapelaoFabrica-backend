@@ -1717,6 +1717,14 @@ async function runLifecycleMaintenance(): Promise<BudgetLifecycleMaintenanceResu
   }
 }
 
+async function remove(id: string): Promise<boolean> {
+  const result = await pool.query<{ id: string }>(
+    `DELETE FROM public.budgets WHERE id = $1 RETURNING id`,
+    [id],
+  );
+  return (result.rowCount ?? 0) > 0;
+}
+
 export const budgetRepository = {
   findAll,
   findById,
@@ -1725,4 +1733,5 @@ export const budgetRepository = {
   approve,
   runLifecycleMaintenance,
   listExpenseDepartmentsCatalog,
+  remove,
 };
