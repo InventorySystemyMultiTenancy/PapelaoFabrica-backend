@@ -195,7 +195,7 @@ function countBusinessDaysElapsedSince(value: string | Date): number {
   return businessDays;
 }
 
-// Official contract: profitMargin is decimal between 0 and 1.
+// Accepts profit margin as decimal (0-1) or percentage (0-100).
 function normalizeProfitMargin(value: number): number {
   if (!Number.isFinite(value) || value <= 0) {
     return 0;
@@ -217,7 +217,7 @@ function resolveBudgetFinancialSummary(
   materials: BudgetMaterial[],
   expenseDepartments: BudgetExpenseDepartment[],
 ): BudgetFinancialSummary {
-  const totalPrice = toMoney(toNumber(row.total_price));
+  const storedTotalPrice = toMoney(toNumber(row.total_price));
   const laborCost = toMoney(toNumber(row.labor_cost));
   const materialsCost = toMoney(
     materials.reduce(
@@ -234,17 +234,14 @@ function resolveBudgetFinancialSummary(
 
   let totalCost = toMoney(toNumber(row.total_cost));
 
-  if (
-    totalCost === 0 &&
-    materialsCost + laborCost + expenseDepartmentsCost > 0
-  ) {
-    totalCost = toMoney(materialsCost + laborCost + expenseDepartmentsCost);
+  if (totalCost === 0 && materialsCost > 0) {
+    totalCost = materialsCost;
   }
 
   let profitMargin = normalizeProfitMargin(toNumber(row.profit_margin));
 
-  if (profitMargin === 0 && totalCost > 0) {
-    const derivedMargin = (totalPrice - totalCost) / totalCost;
+  if (profitMargin === 0 && totalCost > 0 && storedTotalPrice > 0) {
+    const derivedMargin = (storedTotalPrice - totalCost) / totalCost;
     profitMargin = normalizeProfitMargin(derivedMargin);
   }
 
@@ -255,6 +252,10 @@ function resolveBudgetFinancialSummary(
       ? storedProfitValue
       : totalCost * profitMargin;
   const profitValue = toMoney(computedProfitValue);
+  const finalPrice = toMoney(
+    storedTotalPrice > 0 ? storedTotalPrice : totalCost + profitValue,
+  );
+  const profitMarginPercentage = round(profitMargin * 100, 2);
 
   // Business rule requested by frontend: net profit shown as cost - profit.
   const netProfitValue = round(totalCost - profitValue, 2);
@@ -263,7 +264,8 @@ function resolveBudgetFinancialSummary(
   );
 
   return {
-    totalPrice,
+    totalPrice: finalPrice,
+    finalPrice,
     totalCost,
     costsApplicableValue,
     expenseDepartmentsCost,
@@ -272,6 +274,7 @@ function resolveBudgetFinancialSummary(
     costsAppliedAt,
     remainingCostToApply,
     profitMargin,
+    profitMarginPercentage,
     profitValue,
     netProfitValue,
   };
@@ -300,10 +303,12 @@ function mapBudgetRow(row: BudgetRow): Budget {
     remainingValidityBusinessDays,
     isExpired,
     totalPrice: financialSummary.totalPrice,
+    finalPrice: financialSummary.finalPrice,
     totalCost: financialSummary.totalCost,
     costsApplicableValue: financialSummary.costsApplicableValue,
     laborCost: financialSummary.laborCost,
     profitMargin: financialSummary.profitMargin,
+    profitMarginPercentage: financialSummary.profitMarginPercentage,
     profitValue: financialSummary.profitValue,
     netProfitValue: financialSummary.netProfitValue,
     financialSummary,
@@ -369,7 +374,7 @@ function normalizeExpenseDepartment(
 }
 
 function resolveInputFinancialValues(payload: {
-  totalPrice: number;
+  totalPrice?: number | null;
   totalCost?: number | null;
   costsApplicableValue?: number | null;
   laborCost?: number | null;
@@ -378,13 +383,17 @@ function resolveInputFinancialValues(payload: {
   materials: BudgetMaterial[];
   expenseDepartments: BudgetExpenseDepartment[];
 }): {
+  totalPrice: number;
   totalCost: number;
   costsApplicableValue: number;
   laborCost: number;
   profitMargin: number;
   profitValue: number;
 } {
-  const totalPrice = toMoney(payload.totalPrice);
+  const incomingTotalPrice =
+    payload.totalPrice === undefined || payload.totalPrice === null
+      ? null
+      : toMoney(payload.totalPrice);
   const laborCost = toMoney(payload.laborCost ?? 0);
   const materialsCost = toMoney(
     payload.materials.reduce(
@@ -396,21 +405,25 @@ function resolveInputFinancialValues(payload: {
     payload.expenseDepartments.reduce((sum, item) => sum + item.amount, 0),
   );
 
-  const totalCost = toMoney(
-    payload.totalCost ?? materialsCost + laborCost + expenseDepartmentsCost,
-  );
+  const totalCost = toMoney(payload.totalCost ?? materialsCost);
   const costsApplicableValue = toMoney(
-    payload.costsApplicableValue ?? totalCost,
+    payload.costsApplicableValue ?? laborCost + expenseDepartmentsCost,
   );
   const profitMargin = normalizeProfitMargin(
     payload.profitMargin ??
-      (totalCost > 0 ? (totalPrice - totalCost) / totalCost : 0),
+      (incomingTotalPrice !== null && totalCost > 0
+        ? (incomingTotalPrice - totalCost) / totalCost
+        : 0),
   );
 
   const rawProfitValue = payload.profitValue ?? totalCost * profitMargin;
   const profitValue = toMoney(rawProfitValue);
+  const totalPrice = toMoney(
+    incomingTotalPrice !== null ? incomingTotalPrice : totalCost + profitValue,
+  );
 
   return {
+    totalPrice,
     totalCost,
     costsApplicableValue,
     laborCost,
@@ -452,9 +465,11 @@ function groupRows(rows: BudgetWithMaterialRow[]): Budget[] {
     );
 
     budget.totalPrice = financialSummary.totalPrice;
+    budget.finalPrice = financialSummary.finalPrice;
     budget.totalCost = financialSummary.totalCost;
     budget.laborCost = financialSummary.laborCost;
     budget.profitMargin = financialSummary.profitMargin;
+    budget.profitMarginPercentage = financialSummary.profitMarginPercentage;
     budget.profitValue = financialSummary.profitValue;
     budget.netProfitValue = financialSummary.netProfitValue;
     budget.financialSummary = financialSummary;
@@ -557,10 +572,12 @@ function applyExpenseDepartmentsToBudgets(
     );
 
     budget.totalPrice = financialSummary.totalPrice;
+    budget.finalPrice = financialSummary.finalPrice;
     budget.totalCost = financialSummary.totalCost;
     budget.costsApplicableValue = financialSummary.costsApplicableValue;
     budget.laborCost = financialSummary.laborCost;
     budget.profitMargin = financialSummary.profitMargin;
+    budget.profitMarginPercentage = financialSummary.profitMarginPercentage;
     budget.profitValue = financialSummary.profitValue;
     budget.netProfitValue = financialSummary.netProfitValue;
     budget.costsAppliedAt = financialSummary.costsAppliedAt;
@@ -1412,7 +1429,7 @@ async function create(payload: CreateBudgetRecordInput): Promise<Budget> {
         payload.estimatedDeliveryBusinessDays,
         payload.paymentTerms ?? null,
         null,
-        payload.totalPrice,
+        financialValues.totalPrice,
         financialValues.totalCost,
         financialValues.costsApplicableValue,
         financialValues.profitMargin,
@@ -1542,7 +1559,7 @@ async function save(
         payload.estimatedDeliveryBusinessDays,
         payload.paymentTerms,
         payload.deliveryDate,
-        payload.totalPrice,
+        financialValues.totalPrice,
         financialValues.totalCost,
         financialValues.costsApplicableValue,
         financialValues.profitMargin,

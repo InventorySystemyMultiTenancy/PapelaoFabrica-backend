@@ -19,6 +19,11 @@ const listStatusOptions = asyncHandler(async (_req: Request, res: Response) => {
   res.status(200).json({ data: options });
 });
 
+const listApprovedBudgets = asyncHandler(async (_req: Request, res: Response) => {
+  const budgets = await productionService.listApprovedBudgetsForProduction();
+  res.status(200).json({ data: budgets });
+});
+
 const create = asyncHandler(async (req: Request, res: Response) => {
   const production = await productionService.createProduction(req.body);
   res.status(201).json({ data: production });
@@ -42,6 +47,7 @@ const setStatuses = asyncHandler(async (req: Request, res: Response) => {
 export const productionController = {
   list,
   listStatusOptions,
+  listApprovedBudgets,
   create,
   complete,
   setStatuses,

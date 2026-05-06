@@ -37,6 +37,12 @@ productionRoutes.get(
   productionController.listStatusOptions,
 );
 productionRoutes.get(
+  "/approved-budgets",
+  requireAuth,
+  authorizeRoles("admin", "gerente"),
+  productionController.listApprovedBudgets,
+);
+productionRoutes.get(
   "/statuses/options",
   requireAuth,
   authorizeRoles("admin", "gerente"),

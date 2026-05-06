@@ -11,7 +11,7 @@ const monetarySchema = z.coerce.number().nonnegative("Value cannot be negative")
 const profitMarginSchema = z.coerce
   .number()
   .min(0, "profitMargin cannot be negative")
-  .max(1, "profitMargin must be in decimal format between 0 and 1");
+  .max(100, "profitMargin must be between 0 and 100");
 const estimatedDeliveryBusinessDaysSchema = z
   .number({
     required_error: "Campo estimatedDeliveryBusinessDays e obrigatorio.",
@@ -74,6 +74,14 @@ function normalizeBudgetPayloadAliases(input: unknown): unknown {
     payload.paymentTerms = payload.payment_terms;
   }
 
+  if (payload.totalPrice === undefined && payload.finalPrice !== undefined) {
+    payload.totalPrice = payload.finalPrice;
+  }
+
+  if (payload.totalPrice === undefined && payload.final_price !== undefined) {
+    payload.totalPrice = payload.final_price;
+  }
+
   return payload;
 }
 
@@ -83,7 +91,8 @@ const createBudgetBaseSchema = z.object({
   description: z.string().trim().min(1, "description is required").max(2000),
   estimatedDeliveryBusinessDays: estimatedDeliveryBusinessDaysSchema,
   paymentTerms: paymentTermsSchema.optional().nullable(),
-  totalPrice: monetarySchema.default(0),
+  totalPrice: monetarySchema.optional(),
+  finalPrice: monetarySchema.optional(),
   totalCost: monetarySchema.optional(),
   costsApplicableValue: monetarySchema.optional(),
   laborCost: monetarySchema.optional(),
@@ -105,6 +114,7 @@ const updateBudgetBaseSchema = z
     estimatedDeliveryBusinessDays: estimatedDeliveryBusinessDaysSchema.optional(),
     paymentTerms: paymentTermsSchema.optional().nullable(),
     totalPrice: monetarySchema.optional(),
+    finalPrice: monetarySchema.optional(),
     totalCost: monetarySchema.optional(),
     costsApplicableValue: monetarySchema.optional(),
     laborCost: monetarySchema.optional(),
@@ -169,6 +179,7 @@ export interface ExpenseDepartmentCatalogItem {
 
 export interface BudgetFinancialSummary {
   totalPrice: number;
+  finalPrice: number;
   totalCost: number;
   costsApplicableValue: number;
   expenseDepartmentsCost: number;
@@ -177,6 +188,7 @@ export interface BudgetFinancialSummary {
   costsAppliedAt: string | null;
   remainingCostToApply: number;
   profitMargin: number;
+  profitMarginPercentage: number;
   profitValue: number;
   netProfitValue: number;
 }
@@ -195,10 +207,12 @@ export interface Budget {
   remainingValidityBusinessDays: number;
   isExpired: boolean;
   totalPrice: number;
+  finalPrice: number;
   totalCost: number;
   costsApplicableValue: number;
   laborCost: number;
   profitMargin: number;
+  profitMarginPercentage: number;
   profitValue: number;
   netProfitValue: number;
   financialSummary: BudgetFinancialSummary;

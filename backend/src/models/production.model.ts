@@ -148,6 +148,19 @@ export interface Production {
   orderId: string | null;
 }
 
+export interface ApprovedBudgetProductionSummary {
+  id: string;
+  clientName: string;
+  description: string;
+  category: string;
+  totalCost: number;
+  costsApplicableValue: number;
+  profitValue: number;
+  profitMargin: number;
+  profitMarginPercentage: number;
+  finalPrice: number;
+}
+
 export type CreateProductionInput = z.infer<typeof createProductionSchema>;
 export type AdvanceProductionStatusInput = z.infer<
   typeof advanceProductionStatusSchema

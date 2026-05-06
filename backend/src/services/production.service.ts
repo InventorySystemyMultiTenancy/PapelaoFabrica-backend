@@ -1,10 +1,12 @@
 import {
+  ApprovedBudgetProductionSummary,
   AdvanceProductionStatusInput,
   CreateProductionInput,
   Production,
   ProductionStageOption,
   SetProductionStatusesInput,
 } from "../models/production.model";
+import { budgetRepository } from "../repositories/budget.repository";
 import { employeeRepository } from "../repositories/employee.repository";
 import { productionRepository } from "../repositories/production.repository";
 import { teamRepository } from "../repositories/team.repository";
@@ -44,6 +46,29 @@ async function createProduction(
     ...payload,
     installationTeam: installationTeamName,
   });
+}
+
+async function listApprovedBudgetsForProduction(): Promise<
+  ApprovedBudgetProductionSummary[]
+> {
+  const result = await budgetRepository.findAll({
+    status: "approved",
+    page: 1,
+    limit: 100,
+  });
+
+  return result.data.map((budget) => ({
+    id: budget.id,
+    clientName: budget.clientName,
+    description: budget.description,
+    category: budget.category,
+    totalCost: budget.totalCost,
+    costsApplicableValue: budget.costsApplicableValue,
+    profitValue: budget.profitValue,
+    profitMargin: budget.profitMargin,
+    profitMarginPercentage: budget.profitMarginPercentage,
+    finalPrice: budget.finalPrice,
+  }));
 }
 
 async function listProductionStatusOptions(): Promise<ProductionStageOption[]> {
@@ -89,6 +114,7 @@ async function advanceProductionStatus(
 export const productionService = {
   listProductions,
   listProductionStatusOptions,
+  listApprovedBudgetsForProduction,
   createProduction,
   completeProduction,
   setProductionStatuses,
