@@ -104,6 +104,7 @@ export interface SaveBudgetRecordInput {
   deliveryDate: string | null;
   totalPrice: number;
   totalCost: number;
+  freightValue: number;
   costsApplicableValue: number;
   laborCost: number;
   profitMargin: number;
@@ -389,11 +390,13 @@ function resolveInputFinancialValues(payload: {
   laborCost?: number | null;
   profitMargin?: number | null;
   profitValue?: number | null;
+  freightValue?: number | null;
   materials: BudgetMaterial[];
   expenseDepartments: BudgetExpenseDepartment[];
 }): {
   totalPrice: number;
   totalCost: number;
+  freightValue: number;
   costsApplicableValue: number;
   laborCost: number;
   profitMargin: number;
@@ -413,6 +416,7 @@ function resolveInputFinancialValues(payload: {
   const expenseDepartmentsCost = toMoney(
     payload.expenseDepartments.reduce((sum, item) => sum + item.amount, 0),
   );
+  const freightValue = toMoney(payload.freightValue ?? 0);
 
   const totalCost = toMoney(payload.totalCost ?? materialsCost);
   const costsApplicableValue = toMoney(
@@ -434,6 +438,7 @@ function resolveInputFinancialValues(payload: {
   return {
     totalPrice,
     totalCost,
+    freightValue,
     costsApplicableValue,
     laborCost,
     profitMargin,
@@ -1388,6 +1393,7 @@ async function create(payload: CreateBudgetRecordInput): Promise<Budget> {
       laborCost: payload.laborCost,
       profitMargin: payload.profitMargin,
       profitValue: payload.profitValue,
+      freightValue: payload.freightValue,
       materials: materialsWithProducts,
       expenseDepartments: expenseDepartmentsWithCatalog,
     });
@@ -1448,6 +1454,7 @@ async function create(payload: CreateBudgetRecordInput): Promise<Budget> {
         null,
         financialValues.totalPrice,
         financialValues.totalCost,
+        financialValues.freightValue,
         financialValues.costsApplicableValue,
         financialValues.profitMargin,
         financialValues.profitValue,
@@ -1512,6 +1519,7 @@ async function save(
       laborCost: payload.laborCost,
       profitMargin: payload.profitMargin,
       profitValue: payload.profitValue,
+      freightValue: payload.freightValue,
       materials: materialsWithProducts,
       expenseDepartments: expenseDepartmentsWithCatalog,
     });
@@ -1529,18 +1537,19 @@ async function save(
           delivery_date = $8,
           total_price = $9,
           total_cost = $10,
-          costs_applicable_value = $11,
-          profit_margin = $12,
-          profit_value = $13,
-          labor_cost = $14,
-          notes = $15,
-          approved_at = $16,
+          freight_value = $11,
+          costs_applicable_value = $12,
+          profit_margin = $13,
+          profit_value = $14,
+          labor_cost = $15,
+          notes = $16,
+          approved_at = $17,
           costs_applied_at = CASE
             WHEN $5 IN ('pre_approved', 'approved') THEN COALESCE(costs_applied_at, NOW())
             ELSE costs_applied_at
           END,
           costs_applied_value = CASE
-            WHEN $5 IN ('pre_approved', 'approved') THEN $11::numeric
+            WHEN $5 IN ('pre_approved', 'approved') THEN $12::numeric
             ELSE costs_applied_value
           END,
           updated_at = NOW()
@@ -1556,6 +1565,7 @@ async function save(
           delivery_date,
           total_price,
           total_cost,
+          freight_value,
           costs_applicable_value,
           profit_margin,
           profit_value,
@@ -1578,6 +1588,7 @@ async function save(
         payload.deliveryDate,
         financialValues.totalPrice,
         financialValues.totalCost,
+        financialValues.freightValue,
         financialValues.costsApplicableValue,
         financialValues.profitMargin,
         financialValues.profitValue,

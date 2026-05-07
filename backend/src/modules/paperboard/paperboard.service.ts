@@ -73,6 +73,7 @@ async function upsertConfig(
     deliveryDate: budget.deliveryDate,
     totalPrice,
     totalCost,
+    freightValue: budget.freightValue,
     costsApplicableValue: budget.costsApplicableValue,
     laborCost: budget.laborCost,
     profitMargin: safeProfitMargin,
