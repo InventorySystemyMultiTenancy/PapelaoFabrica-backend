@@ -2,6 +2,22 @@ import { CreateProductInput, Product, UpdateProductInput } from "../models/produ
 import { productRepository } from "../repositories/product.repository";
 import { AppError } from "../utils/app-error";
 
+type PaperboardQuality = "CMCB" | "CMCBC";
+
+interface NormalizedPaperboardFields {
+  isPaperboardMaterial: boolean;
+  length: number | null;
+  width: number | null;
+  height: number | null;
+  quality: PaperboardQuality | null;
+  gramatura: number | null;
+}
+
+const PAPERBOARD_GRAMATURA_BY_QUALITY: Record<PaperboardQuality, number> = {
+  CMCB: 511,
+  CMCBC: 651,
+};
+
 async function ensureProductNameAvailable(name: string, excludedId?: string): Promise<void> {
   const existingProduct = await productRepository.findByName(name);
 
@@ -24,14 +40,74 @@ async function getProductById(id: string): Promise<Product> {
   return product;
 }
 
+function validateDimension(name: string, value: number | null): void {
+  if (value === null || value === undefined) {
+    throw new AppError("length, width and height are required for paperboard materials", 400);
+  }
+
+  if (value <= 0) {
+    throw new AppError(`${name} must be greater than zero for paperboard materials`, 400);
+  }
+}
+
+function normalizePaperboardFields(input: {
+  isPaperboardMaterial: boolean;
+  length?: number | null;
+  width?: number | null;
+  height?: number | null;
+  quality?: string | null;
+}): NormalizedPaperboardFields {
+  if (!input.isPaperboardMaterial) {
+    return {
+      isPaperboardMaterial: false,
+      length: null,
+      width: null,
+      height: null,
+      quality: null,
+      gramatura: null,
+    };
+  }
+
+  validateDimension("length", input.length ?? null);
+  validateDimension("width", input.width ?? null);
+  validateDimension("height", input.height ?? null);
+
+  if (!input.quality) {
+    throw new AppError("quality is required for paperboard materials", 400);
+  }
+
+  if (input.quality !== "CMCB" && input.quality !== "CMCBC") {
+    throw new AppError("quality must be CMCB or CMCBC", 400);
+  }
+
+  const quality = input.quality;
+  const gramatura = PAPERBOARD_GRAMATURA_BY_QUALITY[quality];
+
+  return {
+    isPaperboardMaterial: true,
+    length: input.length ?? null,
+    width: input.width ?? null,
+    height: input.height ?? null,
+    quality,
+    gramatura,
+  };
+}
+
 async function createProduct(payload: CreateProductInput): Promise<Product> {
   await ensureProductNameAvailable(payload.name);
 
-  if (payload.isPaperboardMaterial && !payload.gramatura) {
-    throw new AppError("gramatura is required for paperboard materials", 400);
-  }
+  const paperboardFields = normalizePaperboardFields({
+    isPaperboardMaterial: payload.isPaperboardMaterial ?? false,
+    length: payload.length,
+    width: payload.width,
+    height: payload.height,
+    quality: payload.quality,
+  });
 
-  return productRepository.create(payload);
+  return productRepository.create({
+    ...payload,
+    ...paperboardFields,
+  });
 }
 
 async function updateProduct(id: string, payload: UpdateProductInput): Promise<Product> {
@@ -52,9 +128,17 @@ async function updateProduct(id: string, payload: UpdateProductInput): Promise<P
   const updatedProduct = await productRepository.update(id, {
     name: nextName,
     lowStockAlertQuantity: nextLowStockAlertQuantity,
-    isPaperboardMaterial: payload.isPaperboardMaterial,
-    gramatura: payload.gramatura,
-    sheetsPerBundle: payload.sheetsPerBundle,
+    ...normalizePaperboardFields({
+      isPaperboardMaterial: payload.isPaperboardMaterial ?? existingProduct.isPaperboardMaterial,
+      length: payload.length !== undefined ? payload.length : existingProduct.length,
+      width: payload.width !== undefined ? payload.width : existingProduct.width,
+      height: payload.height !== undefined ? payload.height : existingProduct.height,
+      quality: payload.quality !== undefined ? payload.quality : existingProduct.quality,
+    }),
+    sheetsPerBundle:
+      payload.sheetsPerBundle !== undefined
+        ? payload.sheetsPerBundle
+        : existingProduct.sheetsPerBundle,
   });
 
   if (!updatedProduct) {

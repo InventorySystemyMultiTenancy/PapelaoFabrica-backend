@@ -310,6 +310,10 @@ END $$;
 -- 8. Extend products with paperboard material fields
 ALTER TABLE public.products
   ADD COLUMN IF NOT EXISTS is_paperboard_material BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS length                 NUMERIC(10,2),
+  ADD COLUMN IF NOT EXISTS width                  NUMERIC(10,2),
+  ADD COLUMN IF NOT EXISTS height                 NUMERIC(10,2),
+  ADD COLUMN IF NOT EXISTS quality                VARCHAR(10),
   ADD COLUMN IF NOT EXISTS gramatura              NUMERIC(10,2),
   ADD COLUMN IF NOT EXISTS sheets_per_bundle      INTEGER;
 

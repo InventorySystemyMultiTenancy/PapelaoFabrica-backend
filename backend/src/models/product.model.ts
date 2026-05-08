@@ -8,6 +8,10 @@ export const createProductSchema = z.object({
     .nonnegative("lowStockAlertQuantity cannot be negative")
     .default(0),
   isPaperboardMaterial: z.boolean().optional().default(false),
+  length: z.coerce.number().optional().nullable(),
+  width: z.coerce.number().optional().nullable(),
+  height: z.coerce.number().optional().nullable(),
+  quality: z.string().trim().optional().nullable(),
   gramatura: z.coerce.number().positive("gramatura must be positive").optional().nullable(),
   sheetsPerBundle: z.coerce
     .number()
@@ -26,6 +30,10 @@ export const updateProductSchema = z
       .nonnegative("lowStockAlertQuantity cannot be negative")
       .optional(),
     isPaperboardMaterial: z.boolean().optional(),
+    length: z.coerce.number().optional().nullable(),
+    width: z.coerce.number().optional().nullable(),
+    height: z.coerce.number().optional().nullable(),
+    quality: z.string().trim().optional().nullable(),
     gramatura: z.coerce.number().positive("gramatura must be positive").optional().nullable(),
     sheetsPerBundle: z.coerce
       .number()
@@ -45,6 +53,10 @@ export interface Product {
   lowStockAlertQuantity: number;
   stockStatus: "em_estoque" | "precisa_comprar";
   isPaperboardMaterial: boolean;
+  length: number | null;
+  width: number | null;
+  height: number | null;
+  quality: "CMCB" | "CMCBC" | null;
   gramatura: number | null;
   sheetsPerBundle: number | null;
   createdAt: string;
