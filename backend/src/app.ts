@@ -12,6 +12,7 @@ const allowedOrigins = [
 	"http://localhost:8080",
 	"http://10.0.0.160:8080/",
 	"https://papel-o-fabrica-frontend.vercel.app",
+	"https://4dembalagens.selfmachine.com.br",
 ];
 
 const normalizedAllowedOrigins = allowedOrigins.map((origin) => origin.replace(/\/$/, ""));
