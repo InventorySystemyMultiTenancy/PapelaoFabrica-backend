@@ -33,7 +33,7 @@ productionRoutes.get("/", requireAuth, productionController.list);
 productionRoutes.get(
   "/status-options",
   requireAuth,
-  authorizeRoles("admin", "gerente"),
+  authorizeRoles("admin", "gerente", "funcionario"),
   productionController.listStatusOptions,
 );
 productionRoutes.get(
@@ -45,13 +45,13 @@ productionRoutes.get(
 productionRoutes.get(
   "/statuses/options",
   requireAuth,
-  authorizeRoles("admin", "gerente"),
+  authorizeRoles("admin", "gerente", "funcionario"),
   productionController.listStatusOptions,
 );
 productionRoutes.get(
   "/stages/options",
   requireAuth,
-  authorizeRoles("admin", "gerente"),
+  authorizeRoles("admin", "gerente", "funcionario"),
   productionController.listStatusOptions,
 );
 productionRoutes.post(

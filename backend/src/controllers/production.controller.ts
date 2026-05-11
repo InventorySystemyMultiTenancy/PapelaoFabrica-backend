@@ -5,7 +5,7 @@ import { asyncHandler } from "../utils/async-handler";
 
 const list = asyncHandler(async (req: Request, res: Response) => {
   const employeeIdQuery = typeof req.query.employeeId === "string" ? req.query.employeeId : undefined;
-  const employeeId = req.authUser?.role === "funcionario" ? req.authUser.id : employeeIdQuery;
+  const employeeId = req.authUser?.role === "funcionario" ? undefined : employeeIdQuery;
   const query = listProductionsQuerySchema.parse({
     active: req.query.active,
   });

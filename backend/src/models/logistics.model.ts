@@ -54,6 +54,7 @@ export const listFechamentosQuerySchema = z.object({
 });
 
 export interface LogisticsSummaryProductionStats {
+  totalCount: number;
   activeCount: number;
   overdueCount: number;
   nearDeadlineCount: number;

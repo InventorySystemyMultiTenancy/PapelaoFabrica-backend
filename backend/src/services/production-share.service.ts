@@ -20,15 +20,51 @@ function tokenHashPrefix(value: string): string {
   return value.slice(0, 12);
 }
 
+function parseFrontendBaseUrl(value: string): string | null {
+  const candidates = value
+    .split(",")
+    .map((candidate) => candidate.trim())
+    .filter(Boolean);
+
+  const validOrigins = candidates
+    .map((candidate) => {
+      try {
+        return new URL(candidate).origin;
+      } catch {
+        return null;
+      }
+    })
+    .filter((origin): origin is string => Boolean(origin));
+
+  if (validOrigins.length === 0) {
+    return null;
+  }
+
+  if (env.NODE_ENV === "production") {
+    const publicOrigin = validOrigins.find(
+      (origin) =>
+        !origin.includes("localhost") &&
+        !origin.includes("127.0.0.1") &&
+        !origin.includes("0.0.0.0"),
+    );
+
+    if (publicOrigin) {
+      return publicOrigin;
+    }
+  }
+
+  return validOrigins[0];
+}
+
 function buildPublicShareUrl(token: string): string {
   const relativePath = `/acompanhar-producao/${token}`;
-  const configuredBaseUrl = env.FRONTEND_PUBLIC_BASE_URL.trim();
+  const configuredBaseUrl = parseFrontendBaseUrl(env.FRONTEND_PUBLIC_BASE_URL);
 
   if (!configuredBaseUrl) {
     return relativePath;
   }
 
-  return `${configuredBaseUrl.replace(/\/$/, "")}${relativePath}`;
+  return `${configuredBaseUrl}${relativePath}`;
 }
 
 function buildPublicImageUrl(token: string, imageId: string): string {

@@ -148,6 +148,8 @@ Environment variable (optional):
 
 - `FRONTEND_PUBLIC_BASE_URL=https://seu-frontend.com`
 
+Use only the frontend origin in `FRONTEND_PUBLIC_BASE_URL` (for example, `https://4dembalagens.selfmachine.com.br`), not a page path such as `/login` and not the CORS origins list.
+
 If this variable is empty, backend returns a relative URL in `data.url` (example: `/acompanhar-producao/<token>`).
 
 Endpoints:

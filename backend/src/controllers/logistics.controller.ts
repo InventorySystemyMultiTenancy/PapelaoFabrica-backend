@@ -15,8 +15,23 @@ function toOptionalQueryString(value: unknown): string | undefined {
   return trimmedValue.length > 0 ? trimmedValue : undefined;
 }
 
-const summary = asyncHandler(async (_req: Request, res: Response) => {
+const summary = asyncHandler(async (req: Request, res: Response) => {
   const data = await logisticsService.getLogisticsSummary();
+
+  if (req.authUser?.role === "funcionario") {
+    res.status(200).json({
+      data: {
+        productions: {
+          totalCount: data.productions.totalCount,
+          activeCount: data.productions.activeCount,
+          overdueCount: data.productions.overdueCount,
+          onTimeCount: data.productions.onTimeCount,
+        },
+      },
+    });
+    return;
+  }
+
   res.status(200).json({ data });
 });
 

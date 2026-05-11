@@ -12,18 +12,10 @@ import {
 } from "../models/logistics.model";
 import { AppError } from "../utils/app-error";
 
-const ACTIVE_PRODUCTION_STATUSES = [
-  "pending",
-  "cutting",
-  "assembly",
-  "finishing",
-  // Controle de qualidade permanece no grupo de producoes ativas.
-  "quality_check",
-] as const;
-
 interface LogisticsSummaryRow {
   teams_count: string | number;
   active_employees_count: string | number;
+  total_count: string | number;
   active_count: string | number;
   overdue_count: string | number;
   near_deadline_count: string | number;
@@ -164,11 +156,12 @@ async function getSummary(): Promise<LogisticsSummary> {
           po.delivery_date::date AS delivery_date,
           po.initial_cost
         FROM public.production_orders po
-        WHERE po.production_status = ANY($1::text[])
+        WHERE ${activeProductionPredicateSql("po.production_status")}
       )
       SELECT
         (SELECT COUNT(*) FROM public.teams) AS teams_count,
         (SELECT COUNT(*) FROM public.employees e WHERE e.is_active = TRUE) AS active_employees_count,
+        (SELECT COUNT(*) FROM public.production_orders) AS total_count,
         (SELECT COUNT(*) FROM active_productions) AS active_count,
         (
           SELECT COUNT(*)
@@ -186,15 +179,14 @@ async function getSummary(): Promise<LogisticsSummary> {
         (
           SELECT COUNT(*)
           FROM active_productions ap
-          WHERE ap.delivery_date IS NOT NULL
-            AND ap.delivery_date > CURRENT_DATE + 3
+          WHERE ap.delivery_date IS NULL
+            OR ap.delivery_date >= CURRENT_DATE
         ) AS on_time_count,
         (
           SELECT COALESCE(SUM(ap.initial_cost), 0)
           FROM active_productions ap
         ) AS active_productions_total_cost;
     `,
-    [ACTIVE_PRODUCTION_STATUSES],
   );
 
   const topMaterialsResult = await pool.query<TopMaterialRow>(
@@ -207,12 +199,11 @@ async function getSummary(): Promise<LogisticsSummary> {
       FROM public.production_order_materials pom
       INNER JOIN public.production_orders po
         ON po.id = pom.production_order_id
-      WHERE po.production_status = ANY($1::text[])
+      WHERE ${activeProductionPredicateSql("po.production_status")}
       GROUP BY COALESCE(pom.product_id, ''), pom.product_name, pom.unit
       ORDER BY SUM(pom.quantity) DESC, pom.product_name ASC
       LIMIT 10;
     `,
-    [ACTIVE_PRODUCTION_STATUSES],
   );
 
   const summaryRow = summaryResult.rows[0];
@@ -221,6 +212,7 @@ async function getSummary(): Promise<LogisticsSummary> {
     teamsCount: toNumber(summaryRow.teams_count),
     activeEmployeesCount: toNumber(summaryRow.active_employees_count),
     productions: {
+      totalCount: toNumber(summaryRow.total_count),
       activeCount: toNumber(summaryRow.active_count),
       overdueCount: toNumber(summaryRow.overdue_count),
       nearDeadlineCount: toNumber(summaryRow.near_deadline_count),

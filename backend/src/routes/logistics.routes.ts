@@ -10,7 +10,7 @@ const logisticsRoutes = Router();
 logisticsRoutes.get(
   "/summary",
   requireAuth,
-  authorizeRoles("admin", "gerente"),
+  authorizeRoles("admin", "gerente", "funcionario"),
   logisticsController.summary,
 );
 
