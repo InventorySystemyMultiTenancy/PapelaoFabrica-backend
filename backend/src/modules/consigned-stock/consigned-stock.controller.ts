@@ -11,7 +11,8 @@ const getById = asyncHandler(async (req: Request, res: Response) => {
   res.json({ data: await consignedStockService.getById(req.params.id) });
 });
 const upsert = asyncHandler(async (req: Request, res: Response) => {
-  res.status(201).json({ data: await consignedStockService.upsert(req.body) });
+  const stock = await consignedStockService.upsert(req.body);
+  res.status(201).json({ data: stock, ...stock });
 });
 const addMovement = asyncHandler(async (req: Request, res: Response) => {
   res

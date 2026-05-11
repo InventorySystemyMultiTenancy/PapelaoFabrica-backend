@@ -1,6 +1,8 @@
 -- Base schema: tabelas fundamentais que os demais scripts esperam já existir.
 -- Este script usa CREATE TABLE IF NOT EXISTS para ser idempotente.
 
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 CREATE TABLE IF NOT EXISTS public.products (
   id TEXT PRIMARY KEY,
   name TEXT,
@@ -11,7 +13,7 @@ CREATE TABLE IF NOT EXISTS public.products (
 );
 
 CREATE TABLE IF NOT EXISTS public.production_orders (
-  id TEXT PRIMARY KEY,
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
   client_name TEXT NOT NULL,
   description TEXT,
   production_status TEXT NOT NULL DEFAULT 'pending',

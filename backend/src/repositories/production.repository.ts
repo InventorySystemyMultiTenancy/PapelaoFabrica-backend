@@ -1316,11 +1316,13 @@ async function create(
     const canUseUnitPrice = await hasUnitPriceColumn(client);
     const canUseInstallationTeamId = await hasInstallationTeamIdColumn(client);
     const canUsePaperboard = await hasPaperboardProductionColumns(client);
+    const productionId = randomUUID();
 
     const productionInsert = canUseInstallationTeamId
       ? await client.query<ProductionOrderRow>(
           `
             INSERT INTO public.production_orders (
+              id,
               client_name,
               description,
               production_status,
@@ -1329,7 +1331,7 @@ async function create(
               installation_team_id,
               initial_cost
             )
-            VALUES ($1, $2, 'pending', $3, $4, $5, $6)
+            VALUES ($1, $2, $3, 'pending', $4, $5, $6, $7)
             RETURNING
               id::text AS id,
               client_name,
@@ -1345,6 +1347,7 @@ async function create(
               NULL::text AS order_id;
           `,
           [
+            productionId,
             payload.clientName,
             payload.description,
             payload.deliveryDate ?? null,
@@ -1356,6 +1359,7 @@ async function create(
       : await client.query<ProductionOrderRow>(
           `
             INSERT INTO public.production_orders (
+              id,
               client_name,
               description,
               production_status,
@@ -1363,7 +1367,7 @@ async function create(
               installation_team,
               initial_cost
             )
-            VALUES ($1, $2, 'pending', $3, $4, $5)
+            VALUES ($1, $2, $3, 'pending', $4, $5, $6)
             RETURNING
               id::text AS id,
               client_name,
@@ -1379,6 +1383,7 @@ async function create(
               NULL::text AS order_id;
           `,
           [
+            productionId,
             payload.clientName,
             payload.description,
             payload.deliveryDate ?? null,
