@@ -29,8 +29,15 @@ export const updateWasteSchema = z.object({
   notes: z.string().trim().max(2000).optional().nullable(),
 });
 
+export const updateWastePriceSettingSchema = z.object({
+  pricePerKg: z.number().min(0, "preço por kg não pode ser negativo"),
+});
+
 export type CreateWasteInput = z.infer<typeof createWasteSchema>;
 export type UpdateWasteInput = z.infer<typeof updateWasteSchema>;
+export type UpdateWastePriceSettingInput = z.infer<
+  typeof updateWastePriceSettingSchema
+>;
 
 export interface WasteRecord {
   id: string;
@@ -51,4 +58,9 @@ export interface WasteSummary {
   totalSold: number;
   totalRevenue: number;
   pendingSaleWeightKg: number;
+}
+
+export interface WastePriceSetting {
+  pricePerKg: number;
+  updatedAt: string;
 }

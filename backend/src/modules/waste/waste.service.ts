@@ -3,6 +3,8 @@ import { wasteRepository } from "./waste.repository";
 import {
   CreateWasteInput,
   UpdateWasteInput,
+  UpdateWastePriceSettingInput,
+  WastePriceSetting,
   WasteRecord,
   WasteSummary,
 } from "./waste.schema";
@@ -45,6 +47,16 @@ async function getSummary(): Promise<WasteSummary> {
   return wasteRepository.getSummary();
 }
 
+async function getPriceSetting(): Promise<WastePriceSetting> {
+  return wasteRepository.getPriceSetting();
+}
+
+async function updatePriceSetting(
+  input: UpdateWastePriceSettingInput,
+): Promise<WastePriceSetting> {
+  return wasteRepository.updatePriceSetting(input.pricePerKg);
+}
+
 export const wasteService = {
   list,
   getById,
@@ -52,4 +64,6 @@ export const wasteService = {
   update,
   remove,
   getSummary,
+  getPriceSetting,
+  updatePriceSetting,
 };

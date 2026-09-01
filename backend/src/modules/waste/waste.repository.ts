@@ -3,9 +3,23 @@ import { pool } from "../../database/postgres";
 import {
   CreateWasteInput,
   UpdateWasteInput,
+  WastePriceSetting,
   WasteRecord,
   WasteSummary,
 } from "./waste.schema";
+
+interface WastePriceSettingRow {
+  id: string;
+  price_per_kg: string;
+  updated_at: string;
+}
+
+function rowToPriceSetting(row: WastePriceSettingRow): WastePriceSetting {
+  return {
+    pricePerKg: Number(row.price_per_kg),
+    updatedAt: new Date(row.updated_at).toISOString(),
+  };
+}
 
 interface WasteRow {
   id: string;
@@ -154,6 +168,39 @@ async function getSummary(): Promise<WasteSummary> {
   };
 }
 
+async function getPriceSetting(): Promise<WastePriceSetting> {
+  const result = await pool.query<WastePriceSettingRow>(
+    `INSERT INTO waste_price_settings (id, price_per_kg)
+     VALUES ('default', 0)
+     ON CONFLICT (id) DO NOTHING
+     RETURNING id, price_per_kg, updated_at`,
+  );
+
+  if (result.rows[0]) {
+    return rowToPriceSetting(result.rows[0]);
+  }
+
+  const existing = await pool.query<WastePriceSettingRow>(
+    `SELECT id, price_per_kg, updated_at FROM waste_price_settings WHERE id = 'default'`,
+  );
+  return rowToPriceSetting(existing.rows[0]);
+}
+
+async function updatePriceSetting(
+  pricePerKg: number,
+): Promise<WastePriceSetting> {
+  const result = await pool.query<WastePriceSettingRow>(
+    `INSERT INTO waste_price_settings (id, price_per_kg, updated_at)
+     VALUES ('default', $1, NOW())
+     ON CONFLICT (id) DO UPDATE SET
+       price_per_kg = EXCLUDED.price_per_kg,
+       updated_at = NOW()
+     RETURNING id, price_per_kg, updated_at`,
+    [pricePerKg],
+  );
+  return rowToPriceSetting(result.rows[0]);
+}
+
 export const wasteRepository = {
   findAll,
   findById,
@@ -161,4 +208,6 @@ export const wasteRepository = {
   update,
   remove,
   getSummary,
+  getPriceSetting,
+  updatePriceSetting,
 };

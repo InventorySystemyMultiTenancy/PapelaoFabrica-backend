@@ -23,6 +23,16 @@ const remove = asyncHandler(async (req: Request, res: Response) => {
 const getSummary = asyncHandler(async (_req: Request, res: Response) => {
   res.status(200).json({ data: await wasteService.getSummary() });
 });
+const getPriceSetting = asyncHandler(async (_req: Request, res: Response) => {
+  res.status(200).json({ data: await wasteService.getPriceSetting() });
+});
+const updatePriceSetting = asyncHandler(
+  async (req: Request, res: Response) => {
+    res
+      .status(200)
+      .json({ data: await wasteService.updatePriceSetting(req.body) });
+  },
+);
 
 export const wasteController = {
   list,
@@ -31,4 +41,6 @@ export const wasteController = {
   update,
   remove,
   getSummary,
+  getPriceSetting,
+  updatePriceSetting,
 };
