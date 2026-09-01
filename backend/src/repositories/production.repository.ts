@@ -85,10 +85,15 @@ let budgetIdColumnExists: boolean | null = null;
 let paperboardProductionColumnsExist: boolean | null = null;
 
 const STATUS_ALIASES: Record<string, string> = {
-  pending: "Pendente",
-  pendente: "Pendente",
+  pending: "Indústria",
+  pendente: "Indústria",
+  industria: "Indústria",
+  riscador: "Riscador",
   cutting: "Corte",
   corte: "Corte",
+  expedicao: "Expedição",
+  dispatch: "Expedição",
+  // Legacy stage names kept for historical display only (no longer selectable).
   assembly: "Montagem",
   montagem: "Montagem",
   finishing: "Acabamento",
@@ -100,18 +105,24 @@ const STATUS_ALIASES: Record<string, string> = {
   controle: "Controle",
   approved: "Aprovado",
   aprovado: "Aprovado",
-  delivered: "Entregue",
-  entregue: "Entregue",
-  concluido: "Entregue",
-  concluida: "Entregue",
-  completed: "Entregue",
+  delivered: "Entrega",
+  entregue: "Entrega",
+  entrega: "Entrega",
+  concluido: "Entrega",
+  concluida: "Entrega",
+  completed: "Entrega",
 };
 
 const STAGE_CANONICAL_KEYS: Record<string, string> = {
-  pending: "pendente",
-  pendente: "pendente",
+  pending: "industria",
+  pendente: "industria",
+  industria: "industria",
+  riscador: "riscador",
   cutting: "corte",
   corte: "corte",
+  expedicao: "expedicao",
+  dispatch: "expedicao",
+  // Legacy stage names kept for historical display only (no longer selectable).
   assembly: "montagem",
   montagem: "montagem",
   finishing: "acabamento",
@@ -122,16 +133,22 @@ const STAGE_CANONICAL_KEYS: Record<string, string> = {
   controle: "controle",
   approved: "aprovado",
   aprovado: "aprovado",
-  delivered: "entregue",
-  entregue: "entregue",
-  completed: "entregue",
-  concluido: "entregue",
-  concluida: "entregue",
+  delivered: "entrega",
+  entregue: "entrega",
+  entrega: "entrega",
+  completed: "entrega",
+  concluido: "entrega",
+  concluida: "entrega",
 };
 
 const STAGE_LABEL_BY_CANONICAL_KEY: Record<string, string> = {
-  pendente: "Pendente",
+  industria: "Indústria",
+  riscador: "Riscador",
   corte: "Corte",
+  expedicao: "Expedição",
+  entrega: "Entrega",
+  // Legacy stage labels kept for historical display only (no longer selectable).
+  pendente: "Pendente",
   montagem: "Montagem",
   acabamento: "Acabamento",
   controle: "Controle",
@@ -140,14 +157,16 @@ const STAGE_LABEL_BY_CANONICAL_KEY: Record<string, string> = {
 };
 
 const DEFAULT_STAGE_NAMES = [
-  "Pendente",
+  "Indústria",
+  "Riscador",
   "Corte",
-  "Montagem",
-  "Acabamento",
-  "Controle",
-  "Aprovado",
-  "Entregue",
+  "Expedição",
+  "Entrega",
 ] as const;
+
+const SELECTABLE_STAGE_CANONICAL_KEYS = new Set(
+  DEFAULT_STAGE_NAMES.map((name) => toCanonicalStageKey(name)),
+);
 
 function toPortugueseStageName(stageName: string): string {
   const normalized = normalizeStageName(stageName);
@@ -944,6 +963,14 @@ async function resolveStatusStage(
     throw new AppError("stageName is required", 400);
   }
 
+  if (!SELECTABLE_STAGE_CANONICAL_KEYS.has(normalizedName)) {
+    throw new AppError(
+      `Etapa invalida. As etapas permitidas sao: ${DEFAULT_STAGE_NAMES.join(", ")}.`,
+      400,
+      { stageName },
+    );
+  }
+
   const inserted = await client.query<ProductionStatusStageRow>(
     `
       INSERT INTO public.production_status_stages (id, name, normalized_name)
@@ -1087,13 +1114,17 @@ async function listStatusOptions(): Promise<ProductionStageOption[]> {
       current.usageCount += nextUsage;
     }
 
-    return [...groupedByCanonicalKey.values()].sort((a, b) => {
-      if (b.usageCount !== a.usageCount) {
-        return b.usageCount - a.usageCount;
-      }
+    return [...groupedByCanonicalKey.values()]
+      .filter((option) =>
+        SELECTABLE_STAGE_CANONICAL_KEYS.has(option.normalizedName),
+      )
+      .sort((a, b) => {
+        if (b.usageCount !== a.usageCount) {
+          return b.usageCount - a.usageCount;
+        }
 
-      return a.name.localeCompare(b.name, "pt-BR");
-    });
+        return a.name.localeCompare(b.name, "pt-BR");
+      });
   } finally {
     client.release();
   }
@@ -1620,7 +1651,8 @@ function hasApprovalKeyword(statusName: string): boolean {
     normalized === "approved" ||
     normalized === "aprovado" ||
     normalized === "delivered" ||
-    normalized === "entregue"
+    normalized === "entregue" ||
+    normalized === "entrega"
   );
 }
 
