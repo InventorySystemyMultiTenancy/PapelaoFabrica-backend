@@ -1438,6 +1438,7 @@ async function create(payload: CreateBudgetRecordInput): Promise<Budget> {
           $13,
           $14,
           $15,
+          $16,
           CASE WHEN $5 = 'approved' THEN NOW() ELSE NULL END,
           CASE WHEN $5 IN ('pre_approved', 'approved') THEN NOW() ELSE NULL END,
           CASE WHEN $5 IN ('pre_approved', 'approved') THEN $11::numeric ELSE 0::numeric END
