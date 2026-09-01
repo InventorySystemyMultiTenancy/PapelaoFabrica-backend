@@ -111,6 +111,14 @@ async function advanceProductionStatus(
   return production;
 }
 
+async function removeProduction(id: string): Promise<void> {
+  const removed = await productionRepository.remove(id);
+
+  if (!removed) {
+    throw new AppError("Production not found", 404, { productionId: id });
+  }
+}
+
 export const productionService = {
   listProductions,
   listProductionStatusOptions,
@@ -119,4 +127,5 @@ export const productionService = {
   completeProduction,
   setProductionStatuses,
   advanceProductionStatus,
+  removeProduction,
 };

@@ -1795,6 +1795,50 @@ async function setStatuses(
   }
 }
 
+async function remove(id: string): Promise<boolean> {
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const exists = await ensureProductionExistsForUpdate(client, id);
+
+    if (!exists) {
+      await client.query("ROLLBACK");
+      return false;
+    }
+
+    await client.query(
+      `DELETE FROM public.production_order_statuses WHERE production_id = $1;`,
+      [id],
+    );
+    await client.query(
+      `DELETE FROM public.production_images WHERE production_id = $1;`,
+      [id],
+    );
+    await client.query(
+      `DELETE FROM public.production_share_links WHERE production_id = $1;`,
+      [id],
+    );
+    await client.query(
+      `DELETE FROM public.production_order_materials WHERE production_order_id = $1;`,
+      [id],
+    );
+    await client.query(
+      `DELETE FROM public.production_orders WHERE id::text = $1;`,
+      [id],
+    );
+
+    await client.query("COMMIT");
+    return true;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 export const productionRepository = {
   findAll,
   listById,
@@ -1803,4 +1847,5 @@ export const productionRepository = {
   complete,
   setStatuses,
   advanceStatus,
+  remove,
 };

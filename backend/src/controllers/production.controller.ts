@@ -44,6 +44,11 @@ const setStatuses = asyncHandler(async (req: Request, res: Response) => {
   res.status(200).json({ data: production });
 });
 
+const remove = asyncHandler(async (req: Request, res: Response) => {
+  await productionService.removeProduction(req.params.id);
+  res.status(204).end();
+});
+
 export const productionController = {
   list,
   listStatusOptions,
@@ -52,4 +57,5 @@ export const productionController = {
   complete,
   setStatuses,
   advanceStatus,
+  remove,
 };

@@ -101,6 +101,12 @@ productionRoutes.patch(
   authorizeRoles("admin", "gerente"),
   productionController.complete,
 );
+productionRoutes.delete(
+  "/:id",
+  requireAuth,
+  authorizeRoles("admin", "gerente"),
+  productionController.remove,
+);
 productionRoutes.post(
   "/:id/share-link",
   requireAuth,
