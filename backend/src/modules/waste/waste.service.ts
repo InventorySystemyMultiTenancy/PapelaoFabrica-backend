@@ -19,8 +19,15 @@ async function getById(id: string): Promise<WasteRecord> {
   return waste;
 }
 
+async function computeSaleAmount(weightKg: number): Promise<number> {
+  const { pricePerKg } = await wasteRepository.getPriceSetting();
+  return Math.round(weightKg * pricePerKg * 100) / 100;
+}
+
 async function create(input: CreateWasteInput): Promise<WasteRecord> {
-  return wasteRepository.create(input);
+  const saleAmount =
+    input.saleAmount ?? (await computeSaleAmount(input.weightKg));
+  return wasteRepository.create({ ...input, saleAmount });
 }
 
 async function update(
@@ -29,6 +36,13 @@ async function update(
 ): Promise<WasteRecord> {
   const existing = await wasteRepository.findById(id);
   if (!existing) throw new AppError("Registro de resíduo não encontrado", 404);
+  if (
+    input.saleAmount === undefined &&
+    input.weightKg !== undefined &&
+    !existing.sold
+  ) {
+    input = { ...input, saleAmount: await computeSaleAmount(input.weightKg) };
+  }
   if (input.sold === true && !input.soldAt && !existing.soldAt) {
     input = { ...input, soldAt: new Date().toISOString() };
   }

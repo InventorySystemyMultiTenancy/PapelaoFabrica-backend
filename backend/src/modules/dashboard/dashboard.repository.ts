@@ -1,5 +1,29 @@
 import { pool } from "../../database/postgres";
 
+export interface DashboardPeriodQuery {
+  startDate?: string;
+  endDate?: string;
+}
+
+function resolvePeriodBounds(query: DashboardPeriodQuery): {
+  startDate: string;
+  endDate: string;
+} {
+  const now = new Date();
+  const defaultStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const startDate =
+    query.startDate && !Number.isNaN(Date.parse(query.startDate))
+      ? query.startDate
+      : defaultStart.toISOString().split("T")[0];
+  const endDate =
+    query.endDate && !Number.isNaN(Date.parse(query.endDate))
+      ? query.endDate
+      : now.toISOString().split("T")[0];
+
+  return { startDate, endDate };
+}
+
 export interface DashboardSummary {
   // Revenue
   revenueThisMonth: number;
@@ -33,9 +57,20 @@ export interface DashboardSummary {
   // Alerts
   lowStockCount: number;
   unpaidClichesTotal: number;
+
+  // Net profit for the selected period (revenue - cost of products sold)
+  periodStart: string;
+  periodEnd: string;
+  periodRevenue: number;
+  periodCost: number;
+  netProfit: number;
 }
 
-async function getDashboardSummary(): Promise<DashboardSummary> {
+async function getDashboardSummary(
+  query: DashboardPeriodQuery = {},
+): Promise<DashboardSummary> {
+  const { startDate, endDate } = resolvePeriodBounds(query);
+
   const [
     revenueResult,
     openOrdersResult,
@@ -45,6 +80,7 @@ async function getDashboardSummary(): Promise<DashboardSummary> {
     revenueByMonthResult,
     lowStockResult,
     unpaidClichesResult,
+    netProfitResult,
   ] = await Promise.all([
     // Revenue: this month vs last month (paid receivables)
     pool.query<{ this_month: string; last_month: string }>(`
@@ -130,6 +166,21 @@ async function getDashboardSummary(): Promise<DashboardSummary> {
     `,
       )
       .catch(() => ({ rows: [{ total: "0" }] })),
+
+    // Net profit for the selected period: revenue vs cost of products sold
+    // (budgets approved within the period represent products actually sold)
+    pool.query<{ revenue: string; cost: string }>(
+      `
+      SELECT
+        COALESCE(SUM(total_price), 0) AS revenue,
+        COALESCE(SUM(total_cost), 0) AS cost
+      FROM public.budgets
+      WHERE status = 'approved'
+        AND COALESCE(approved_at, created_at)::date >= $1::date
+        AND COALESCE(approved_at, created_at)::date <= $2::date
+    `,
+      [startDate, endDate],
+    ),
   ]);
 
   const receivableMap: Record<string, number> = {};
@@ -170,6 +221,13 @@ async function getDashboardSummary(): Promise<DashboardSummary> {
     })),
     lowStockCount: Number(lowStockResult.rows[0]?.count ?? 0),
     unpaidClichesTotal: Number(unpaidClichesResult.rows[0]?.total ?? 0),
+    periodStart: startDate,
+    periodEnd: endDate,
+    periodRevenue: Number(netProfitResult.rows[0]?.revenue ?? 0),
+    periodCost: Number(netProfitResult.rows[0]?.cost ?? 0),
+    netProfit:
+      Number(netProfitResult.rows[0]?.revenue ?? 0) -
+      Number(netProfitResult.rows[0]?.cost ?? 0),
   };
 }
 

@@ -4,9 +4,29 @@ import {
   AccountReceivable,
   CashflowSummary,
   GenerateInstallmentsInput,
+  PeriodQueryInput,
   ReceivableStatus,
   UpdateReceivableInput,
 } from "./financial.schema";
+
+function resolvePeriodBounds(query: PeriodQueryInput): {
+  startDate: string;
+  endDate: string;
+} {
+  const now = new Date();
+  const defaultStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const startDate =
+    query.startDate && !Number.isNaN(Date.parse(query.startDate))
+      ? query.startDate
+      : defaultStart.toISOString().split("T")[0];
+  const endDate =
+    query.endDate && !Number.isNaN(Date.parse(query.endDate))
+      ? query.endDate
+      : now.toISOString().split("T")[0];
+
+  return { startDate, endDate };
+}
 
 interface AccountReceivableRow {
   id: string;
@@ -121,7 +141,31 @@ interface CashflowRow {
   amount: string | number;
 }
 
-async function getCashflowSummary(): Promise<CashflowSummary> {
+async function getCashflowSummary(
+  query: PeriodQueryInput = {},
+): Promise<CashflowSummary> {
+  const { startDate, endDate } = resolvePeriodBounds(query);
+
+  // Net profit for the selected period: revenue vs cost of products sold
+  // (budgets approved within the period represent products actually sold)
+  const netProfitResult = await pool.query<{
+    revenue: string | number;
+    cost: string | number;
+  }>(
+    `
+     SELECT
+       COALESCE(SUM(total_price), 0) AS revenue,
+       COALESCE(SUM(total_cost), 0) AS cost
+     FROM budgets
+     WHERE status = 'approved'
+       AND COALESCE(approved_at, created_at)::date >= $1::date
+       AND COALESCE(approved_at, created_at)::date <= $2::date
+    `,
+    [startDate, endDate],
+  );
+  const periodRevenue = Number(netProfitResult.rows[0]?.revenue ?? 0);
+  const periodCost = Number(netProfitResult.rows[0]?.cost ?? 0);
+
   // Expected income: pending receivables
   const incomeResult = await pool.query<{ total: string | number }>(
     `SELECT COALESCE(SUM(amount), 0) AS total FROM accounts_receivable WHERE status = 'pending'`,
@@ -161,6 +205,11 @@ async function getCashflowSummary(): Promise<CashflowSummary> {
       month: r.month,
       amount: Number(r.amount),
     })),
+    periodStart: startDate,
+    periodEnd: endDate,
+    periodRevenue,
+    periodCost,
+    netProfit: periodRevenue - periodCost,
   };
 }
 

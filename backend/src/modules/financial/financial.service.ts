@@ -5,6 +5,7 @@ import {
   AccountReceivable,
   CashflowSummary,
   GenerateInstallmentsInput,
+  PeriodQueryInput,
   UpdateReceivableInput,
 } from "./financial.schema";
 
@@ -44,8 +45,8 @@ async function updateReceivable(id: string, input: UpdateReceivableInput): Promi
   return updated;
 }
 
-async function getCashflow(): Promise<CashflowSummary> {
-  return financialRepository.getCashflowSummary();
+async function getCashflow(query: PeriodQueryInput = {}): Promise<CashflowSummary> {
+  return financialRepository.getCashflowSummary(query);
 }
 
 export const financialService = {

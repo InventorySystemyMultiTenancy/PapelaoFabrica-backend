@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { asyncHandler } from "../../utils/async-handler";
 import { financialService } from "./financial.service";
+import { periodQuerySchema } from "./financial.schema";
 
 const getReceivablesByOrder = asyncHandler(async (req: Request, res: Response) => {
   const receivables = await financialService.getReceivablesByOrder(req.params.orderId);
@@ -17,8 +18,12 @@ const updateReceivable = asyncHandler(async (req: Request, res: Response) => {
   res.status(200).json({ data: receivable });
 });
 
-const getCashflow = asyncHandler(async (_req: Request, res: Response) => {
-  const summary = await financialService.getCashflow();
+const getCashflow = asyncHandler(async (req: Request, res: Response) => {
+  const query = periodQuerySchema.parse({
+    startDate: req.query.startDate,
+    endDate: req.query.endDate,
+  });
+  const summary = await financialService.getCashflow(query);
   res.status(200).json({ data: summary });
 });
 

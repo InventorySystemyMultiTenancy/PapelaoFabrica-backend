@@ -39,10 +39,16 @@ export const updateReceivableSchema = z.object({
   notes: z.string().trim().max(1000).optional().nullable(),
 });
 
+export const periodQuerySchema = z.object({
+  startDate: z.string().trim().min(1).optional(),
+  endDate: z.string().trim().min(1).optional(),
+});
+
 export type GenerateInstallmentsInput = z.infer<
   typeof generateInstallmentsSchema
 >;
 export type UpdateReceivableInput = z.infer<typeof updateReceivableSchema>;
+export type PeriodQueryInput = z.infer<typeof periodQuerySchema>;
 
 export interface AccountReceivable {
   id: string;
@@ -64,4 +70,9 @@ export interface CashflowSummary {
   projectedProfit: number;
   projectedProfitCashflow: number;
   receivablesByMonth: Array<{ month: string; amount: number }>;
+  periodStart: string;
+  periodEnd: string;
+  periodRevenue: number;
+  periodCost: number;
+  netProfit: number;
 }

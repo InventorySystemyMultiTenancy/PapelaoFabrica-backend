@@ -10,8 +10,15 @@ dashboardRoutes.use(authorizeRoles("admin", "gerente"));
 
 dashboardRoutes.get(
   "/summary",
-  asyncHandler(async (_req, res) => {
-    const summary = await dashboardRepository.getDashboardSummary();
+  asyncHandler(async (req, res) => {
+    const startDate =
+      typeof req.query.startDate === "string" ? req.query.startDate : undefined;
+    const endDate =
+      typeof req.query.endDate === "string" ? req.query.endDate : undefined;
+    const summary = await dashboardRepository.getDashboardSummary({
+      startDate,
+      endDate,
+    });
     res.status(200).json({ data: summary });
   }),
 );
